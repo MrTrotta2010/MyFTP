@@ -5,7 +5,14 @@ import os
 MAX = 80
 
 def tamarq (arquivo):
-    return os.path.getsize(arquivo)
+
+    tam = 0
+    try:
+        tam = os.path.getsize(arquivo)
+    except:
+        tam = -1
+
+    return tam
 
 def codcomando (entrada):
 
@@ -24,6 +31,9 @@ def codcomando (entrada):
     elif aux[0] == 'ls':
         comando = 4
 
+    else:
+        return comando, ' ', ' '
+
     if len(aux) == 1:
         if comando != 4:
             comando = -2
@@ -33,7 +43,10 @@ def codcomando (entrada):
         if comando == 3:
             aux.append(' ')
         elif comando == 2:
-            aux.append(str(tamarq(aux[1])))
+            tam = tamarq(aux[1])
+            aux.append(str(tam))
+            if tam < 0:
+                comando = -3
         else:
             comando = -2
             aux.append(' ')
@@ -81,6 +94,8 @@ def ftp (sock):
             print('Comando inválido!\n')
         elif comando == -2:
             print('Argumentos incorretos!\n')
+        elif comando == -3:
+            print('Arquivo inexistente!\n')
 
         else: 
             # Envia os dados e agurda resposta
@@ -108,7 +123,7 @@ def ftp (sock):
             resposta = (sock.recv(MAX)).decode()
 
             if comando == 4:
-                resposta = '\u256D\n'+'\n'.join(['\u251C '+x for x in resposta.split('\n')])+'\n\u2570'
+                resposta = '\u256D\n'+'\n'.join(['\u251C '+x for x in (resposta.split('\n'))[:-1]])+'\n\u2570'
 
             print(resposta, '\n')
 

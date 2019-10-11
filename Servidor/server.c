@@ -30,10 +30,11 @@ int argumentos(int argc, char ** argv) {
 	return 0;
 }
 
-char *login(char *usuario, char *senha) {
+// Esta função realiza a autenticação do usuário no servidor
+char *login(char *usuario, char *senha, int *logado) {
 
 	char u[MAX], s[MAX], *msg = malloc(MAX);
-	FILE *usuarios = fopen("usuarios.data", "r");
+	FILE *usuarios = fopen("Dados/usuarios.data", "r");
 	strcpy(msg, "Usuário incorreto!");
 
 	// Abre o arquivo de usuários e verifica se o nome de usuário e a senha existem
@@ -42,6 +43,7 @@ char *login(char *usuario, char *senha) {
 
 		if (strcmp(u, usuario) == 0) {
 			if (strcmp(s, senha) == 0) {
+				*logado = TRUE;
 				strcpy(msg, "Login efetuado com sucesso!");
 				break;
 			}
@@ -53,9 +55,10 @@ char *login(char *usuario, char *senha) {
 	return msg;
 }
 
+// Esta função lista todos os arquivos do servidor
 char *ls() {
 
-	FILE *arquivos = fopen("files.data", "r");
+	FILE *arquivos = fopen("Dados/files.data", "r");
 	char *lista;
 
 	// Descobre o tamanho da lista de arquivos
@@ -75,40 +78,131 @@ char *ls() {
 	return lista;
 }
 
+//Esta função adiciona uma entrada à lista de arquivos
+int adcarq(char *arquivo) {
+	
+	int existe = FALSE;
+	char aux[MAX];
+	printf("->Arquivo: %s\n", arquivo);
+	
+	// Verifica se o arquivo já estava na lista de arquivos
+	FILE *fp = fopen("Dados/files.data", "r");
+	if (fp) {
+		while (!feof(fp)) {
+			fscanf(fp, "%s", aux);
+			if (strcmp(aux, arquivo) == 0) {
+				existe = TRUE;
+				puts("Já tem");
+				fclose(fp);
+				break;
+			}
+		}
+	} else {
+		fclose(fp);
+		return 1;
+	}
+
+	// Caso não esteja, adiciona
+	if (!existe) {
+		puts("Ainda n tem");
+		fp = fopen("Dados/files.data", "a");
+		if (fp) {
+			fprintf(fp, "%s\n", arquivo);
+			fclose(fp);
+		} else {
+			fclose(fp);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+// Esta função transfere um arquivo do cliente para o servidor
 char *put(char *arquivo, int tamanho, int sockfd) {
 	
-	char *buff = malloc(tamanho), *msg = malloc(MAX);
-	printf("Recebendo arquivo: %s de tamanho %d\n", arquivo, tamanho);
-	read(sockfd, buff, tamanho);
-	FILE *arq = fopen("funcionou.txt", "wb");
-	fprintf(arq, "%s", buff);
-	fclose(arq);
-	strcpy(msg, "Arquivo enviado com sucesso!");
+	// O buffer tem o tamanho do arquivo+1 para contar com o EOF
+	char *buff = malloc(tamanho+1), *msg = malloc(MAX);
+
+	// Recebe o arquivo
+	read(sockfd, buff, tamanho+1);
+
+	// Cria um arquivo de mesmo nome na pasta de arquivos do servidor
+	char novoarq[MAX];
+	bzero(novoarq, MAX);
+	strcat(novoarq, "Arquivos/");
+	strcat(novoarq, arquivo);
+	FILE *arq = fopen(novoarq, "w");
+
+	// Salva o arquivo recebido no arquivo criado
+	if (arq) {
+		fprintf(arq, "%s", buff);
+		if (adcarq(arquivo) == 0) {
+			strcpy(msg, "Arquivo enviado com sucesso!");
+			fclose(arq);
+		} else {
+			fclose(arq);
+			remove(novoarq);
+		}
+	} else {
+		strcpy(msg, "Falha na transferência!");
+		fclose(arq);
+	}
+
+	return msg;
+}
+
+// Esta função faz o controle de início de sessão do usuário
+char *trataLogin(int logado) {
+
+	char *msg = malloc(MAX);
+	printf("%d\n", logado);
+
+	if (logado)
+		strcpy(msg, "O usuário já está logado!");
+	else
+		strcpy(msg, "Falha na autenticação!");
+
 	return msg;
 }
 
 // Esta função decodifica o comando enviado pelo cliente
-char *decodcmd(Comando cmd, int sockfd) {
+char *decodcmd(Comando cmd, int sockfd, int *logado) {
 
-	switch(cmd.comando) {
-		case 1: // login
-			return login(cmd.arg1, cmd.arg2);
-		
-		case 2: // put
-			return put(cmd.arg1, atoi(cmd.arg2), sockfd);
+	//printf("logado? %d comando %d\n", *logado, cmd.comando);
+	// Verifica se o usuário já se autenticou com o servidor
+	if (/* (*logado) ==  */TRUE) {
+		switch(cmd.comando) {
+			case 1: // login
+				//return trataLogin(TRUE);
+				return login(cmd.arg1, cmd.arg2, logado);
+			
+			case 2: // put
+				return put(cmd.arg1, atoi(cmd.arg2), sockfd);
 
-		case 3: // get
-			break;
-		
-		case 4: // ls
-			return ls();
+			case 3: // get
+				break;
+			
+			case 4: // ls
+				return ls();
+		}
 	}
+	// else {
+	// 	switch(cmd.comando) {
+	// 		case 1: // login
+	// 			return login(cmd.arg1, cmd.arg2, logado);
+
+	// 		default:			
+	// 			return trataLogin(FALSE);
+	// 	}
+	// }
 }
 
 // Esta função recebe e processa as requisições do cliente 
 void ftp(int sockfd) {
 
 	char buff[MAX]; 
+	int logado = FALSE;
 	Comando cmd; 
 
 	while (1) {
@@ -129,25 +223,18 @@ void ftp(int sockfd) {
 
 		cmd.comando = atoi(buff);
 		
-		// Verifica se o caomando é exit
+		// Verifica se o comando é exit
 		if (strcmp("exit", buff) == 0) {
 			printf("Cliente encerrou a conexão...\n");
 			break;
 		}
 
 		// Decodifica o comando recebido
-		char *resposta = decodcmd(cmd, sockfd);
+		char *resposta = decodcmd(cmd, sockfd, &logado);
 		printf("%s\n", resposta);
 		// Envia uma resposta ao cliente
 		write(sockfd, resposta, strlen(resposta));
 		free(resposta);
-
-		
-		// if msg contains "Exit" then server exit and chat ended. 
-		if (strncmp("exit", buff, 4) == 0) { 
-			printf("Server Exit...\n"); 
-			break; 
-		}
 	} 
 }
 
