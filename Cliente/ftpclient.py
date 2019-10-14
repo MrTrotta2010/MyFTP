@@ -83,8 +83,12 @@ def recebe (arquivo, sock):
     tamanho = (sock.recv(MAX)).decode()
     sock.sendall("Ok".encode())
 
+    # Gambiarra para tirar os caracteres inválidos e deixar somente o tamanho do arquivo
+    tamanho = tamanho.split('\x00')[0]
+    tamanho = int(tamanho)
+
     # Recebe o arquivo como uma string e salva num arquivo
-    arqstr = (sock.recv(int(tamanho))).decode()
+    arqstr = (sock.recv(tamanho+1)).decode()
     sock.sendall("Ok".encode())
     
     try:

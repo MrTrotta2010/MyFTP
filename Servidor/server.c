@@ -232,7 +232,7 @@ char *put(char *arquivo, char *tam, int sockfd) {
 	return msg;
 }
 
-char *encontrafsize(char *arquivo) {
+char *encontrafsize(char *arquivo, unsigned *tamanho) {
 
 	FILE *fp = fopen("Dados/files.data", "r");
 	int cont = 0;
@@ -252,6 +252,8 @@ char *encontrafsize(char *arquivo) {
 	
 	fclose(fp);
 
+	*tamanho = atoi(aux);
+
 	return aux;
 }
 
@@ -259,34 +261,42 @@ char *encontrafsize(char *arquivo) {
 char *get(char *arquivo, int sockfd) {
 	
 	// Adiciona o diretório correto ao nome do arquivo
+	int deu = FALSE;
 	char endarq[] = "Arquivos/", *msg = malloc(MAX);
 	strcat(endarq, arquivo);
 	printf("Arquivo: %s\n", endarq);
 
 	// Verifica se o arquivo está no servidor
 	FILE *fp = fopen(endarq, "r");
-	if (fp) {
+	if (fp) deu = TRUE;
+	//fclose (fp);
+
+	if (deu) {
 		// O servidor precisa descobrir o tamanho o arquivo
 		// Primeiro, o buffer guardará o tamanho do arquivo
-		fclose (fp);
 		char tam[MAX];
-		strcpy(tam, encontrafsize(arquivo));
-		printf("Tamanho: %s\n", tam);
+		unsigned tamanho;
+		bzero(tam, MAX);
+		strcpy(tam, encontrafsize(arquivo, &tamanho));
 
 		// Envia o tamanho do arquivo
 		write(sockfd, tam, MAX);
-		//read(sockfd, tam, MAX);
+		read(sockfd, tam, MAX);
 
-		printf("foi");
 		// O buffer agora recebe o tamanho do arquivo+1 para contar com o EOF
-		unsigned tamanho = atoi(tam);
-		char *buff = malloc(tamanho+1);
+		printf("Tamanho: %u\n", tamanho);
+		char buff[tamanho+1];
+		bzero(buff, tamanho+1);
 
 		// Transfere o arquivo para o buffer e envia
-		fp = fopen(endarq, "r");
+		//fp = fopen(endarq, "r");
+		if (!fp) {
+			puts("Não abriu!!!");
+			exit(1);
+		}
 		fread(buff, 1, tamanho+1, fp);
 		write(sockfd, buff, tamanho+1);
-		read(sockfd, buff, MAX);
+		read(sockfd, buff, 2);
 		fclose(fp);
 
 		// Exclui o arquivo enviado da lista de arquivos e o deleta
@@ -297,7 +307,11 @@ char *get(char *arquivo, int sockfd) {
 			adcarq(endarq, tam); // Readiciona o arquivo para manter a consistência
 			strcpy(msg, "Falha na transferência!");
 		}
+	} else {
+		puts("Não tem o arquivo");
 	}
+
+	strcpy(msg, "Retornou");
 
 	return msg;
 }
@@ -406,6 +420,7 @@ void ftp(int sockfd) {
 		}
 
 		// Decodifica o comando recebido
+		printf("Comando: %d- Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 		char *resposta = decodcmd(cmd, sockfd, &logado);
 		//printf("%s\n", resposta);
 		// Envia uma resposta ao cliente
