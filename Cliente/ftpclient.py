@@ -4,6 +4,7 @@ import os
 
 MAX = 80
 
+# Esta função recebe um arquivo e retorna seu tamanho
 def tamarq (arquivo):
 
     tam = 0
@@ -14,6 +15,7 @@ def tamarq (arquivo):
 
     return tam
 
+# Função que recebe a entrada do usuário, faz o parsing e devolve o comando e os argumentos
 def codcomando (entrada):
 
     aux = entrada.split()
@@ -60,6 +62,7 @@ def codcomando (entrada):
 
     return comando, aux[1], aux[2]
 
+# Envia um arquivo para o servidor
 def envia (arquivo, tamanho, sock):
     
     try:
@@ -69,6 +72,27 @@ def envia (arquivo, tamanho, sock):
         sock.sendall(dados)
     
     except:
+        return 1
+    
+    return 0
+
+# Recebe um arquivo do servidor
+def recebe (arquivo, sock):
+
+    # Recebe o tamanho do arquivo
+    tamanho = (sock.recv(MAX)).decode()
+    sock.sendall("Ok".encode())
+
+    # Recebe o arquivo como uma string e salva num arquivo
+    arqstr = (sock.recv(int(tamanho))).decode()
+    sock.sendall("Ok".encode())
+    
+    try:
+        arq = open(arquivo, "w")
+        arq.write(arqstr)
+        arq.close()
+    except:
+        os.remove(arquivo)
         return 1
     
     return 0
@@ -89,43 +113,40 @@ def ftp (sock):
         
         # Codifica o comando
         comando, arg1, arg2 = codcomando(entrada)
-        
-        if comando == -1:
-            print('Comando inválido!\n')
-        elif comando == -2:
-            print('Argumentos incorretos!\n')
-        elif comando == -3:
-            print('Arquivo inexistente!\n')
 
-        else: 
-            # Envia os dados e agurda resposta
-            try:
-                sock.sendall((str(comando)).encode())
-                sock.recv(MAX)
+        # Envia os dados e agurda resposta
+        try:
+            sock.sendall((str(comando)).encode())
+            sock.recv(MAX)
 
-                sock.sendall((arg1).encode())
-                sock.recv(MAX)
+            sock.sendall((arg1).encode())
+            sock.recv(MAX)
 
-                sock.sendall((arg2).encode())
-                sock.recv(MAX)
+            sock.sendall((arg2).encode())
+            sock.recv(MAX)
 
-            except:
-                print("Servidor desconectado...")
-                print('closing socket')
-                sock.close()
-                break
+        except:
+            print("Servidor desconectado...")
+            print('closing socket')
+            sock.close()
+            break
 
-            # Se o comando for put, envia o arquivo
-            if comando == 2:
-                if envia(arg1, arg2, sock) != 0:
-                    print("Falha no envio do arquivo!")
+        # Se o comando for put, envia o arquivo
+        if comando == 2:
+            if envia(arg1, arg2, sock) != 0:
+                print("Falha na transferência!")
 
-            resposta = (sock.recv(MAX)).decode()
+        # Se o comando for get, recebe o arquivo
+        if comando == 3:
+            if recebe(arg1, sock) != 0:
+                print("Falha na transferência!")
 
-            if comando == 4:
-                resposta = '\u256D\n'+'\n'.join(['\u251C '+x for x in (resposta.split('\n'))[:-1]])+'\n\u2570'
+        resposta = (sock.recv(MAX)).decode()
 
-            print(resposta, '\n')
+        if comando == 4:
+            resposta = '\u256D\n'+'\n'.join(['\u251C '+x for x in (resposta.split('\n'))[:-1]])+'\n\u2570'
+
+        print(resposta, '\n')
 
 if __name__ == "__main__":
 

@@ -55,6 +55,15 @@ char *login(char *usuario, char *senha, int *logado) {
 	return msg;
 }
 
+// Esta função recebe um arquivo e retorna seu tamanho em bytes
+unsigned tamarq(FILE *arq) {
+
+	fseek(arq, 0, SEEK_END);
+	unsigned tamanho = ftell(arq);
+	fseek(arq, 0, SEEK_SET);
+	return tamanho;	
+}
+
 // Esta função lista todos os arquivos do servidor
 char *ls() {
 
@@ -62,9 +71,7 @@ char *ls() {
 	char *lista;
 
 	// Descobre o tamanho da lista de arquivos
-	fseek(arquivos, 0, SEEK_END);
-	int tamanho = ftell(arquivos);
-	fseek(arquivos, 0, SEEK_SET);
+	unsigned tamanho = tamarq(arquivos);
 
 	if (tamanho > 0) { // Se existem arquivos, copia a lista para a string
 		lista = calloc(tamanho + 1, sizeof(char));
@@ -79,18 +86,17 @@ char *ls() {
 }
 
 //Esta função adiciona uma entrada à lista de arquivos
-int adcarq(char *arquivo) {
+int adcarq(char *arquivo, char *tamanho) {
 	
 	int existe = FALSE;
-	char aux[MAX];
-	printf("->Arquivo: %s\n", arquivo);
+	char n[MAX];
 	
 	// Verifica se o arquivo já estava na lista de arquivos
 	FILE *fp = fopen("Dados/files.data", "r");
 	if (fp) {
 		while (!feof(fp)) {
-			fscanf(fp, "%s", aux);
-			if (strcmp(aux, arquivo) == 0) {
+			fscanf(fp, "%s\n", n);
+			if (strcmp(n, arquivo) == 0) {
 				existe = TRUE;
 				puts("Já tem");
 				fclose(fp);
@@ -113,14 +119,88 @@ int adcarq(char *arquivo) {
 			fclose(fp);
 			return 1;
 		}
+
+		fp = fopen("Dados/fsize.data", "a");
+		if (fp) {
+			fprintf(fp, "%s\n", tamanho);
+			fclose(fp);
+		} else {
+			fclose(fp);
+			return 1;
+		}
 	}
 
 	return 0;
 }
 
+// Esta função remove uma entrada na lista de arquivos
+int remarq(char *arquivo) {
+
+	FILE *alvo = fopen("Dados/files.data", "r");
+	unsigned tamanho = tamarq(alvo) - strlen(arquivo);
+
+	char arqstr[tamanho], aux[MAX];
+	int cont = 0, achou = FALSE;
+
+	if (alvo) {
+		// Percorre o arquivo antigo copiando para uma string as entradas diferentes do nome do arquivo
+		while (!feof(alvo)) {
+			fscanf(alvo, "%s\n", aux);
+			if (strcmp(arquivo, aux) != 0 && !achou) {
+				strcat(arqstr, aux);
+				cont++; //Registra a linha onde estava o arquivo
+			} else {
+				achou = TRUE;
+			}
+		}
+		fclose(alvo);
+
+	} else {
+		fclose(alvo);
+		return 1;
+	}
+
+	// Sobrescreve o arquivo com a nova lista
+	alvo = fopen("Dados/files.data", "w");
+	if (alvo) {
+		fprintf(alvo, "%s", arqstr);
+		fclose(alvo);
+	} else {
+		fclose(alvo);
+		return 1;
+	}
+
+	// Abre o arquivo de tamanhos
+	alvo = fopen("Dados/fsize.data", "r");
+	FILE *temp = fopen("Dados/temp", "w");
+
+	if (alvo) {
+		// Percorre o arquivo de tamanhos até a linha onde estáo tamanho do arquivo
+		for (int i = 0; !feof(alvo); i++) {
+			fscanf(alvo, "%s\n", aux);
+			if (i != cont) {
+				fprintf(temp, "%s\n", aux);
+			}
+		}
+		fclose(alvo);
+		fclose(temp);
+	} else {
+		fclose(alvo);
+		fclose(temp);
+		return 1;
+	}
+
+	// Apaga o arquivo antigo e renomeia o novo
+	remove("Dados/fsize.data");
+	rename("Dados/temp", "Dados/fsize.data");
+
+	return 0;
+}
+
 // Esta função transfere um arquivo do cliente para o servidor
-char *put(char *arquivo, int tamanho, int sockfd) {
+char *put(char *arquivo, char *tam, int sockfd) {
 	
+	unsigned tamanho = atoi(tam); 
 	// O buffer tem o tamanho do arquivo+1 para contar com o EOF
 	char *buff = malloc(tamanho+1), *msg = malloc(MAX);
 
@@ -137,7 +217,7 @@ char *put(char *arquivo, int tamanho, int sockfd) {
 	// Salva o arquivo recebido no arquivo criado
 	if (arq) {
 		fprintf(arq, "%s", buff);
-		if (adcarq(arquivo) == 0) {
+		if (adcarq(arquivo, tam) == 0) {
 			strcpy(msg, "Arquivo enviado com sucesso!");
 			fclose(arq);
 		} else {
@@ -147,6 +227,76 @@ char *put(char *arquivo, int tamanho, int sockfd) {
 	} else {
 		strcpy(msg, "Falha na transferência!");
 		fclose(arq);
+	}
+
+	return msg;
+}
+
+char *encontrafsize(char *arquivo) {
+
+	FILE *fp = fopen("Dados/files.data", "r");
+	int cont = 0;
+	char *aux = malloc(MAX);
+	strcpy(aux, "\0");
+
+	for (int i = 0; strcmp(aux, arquivo) != 0; i++) {
+		fscanf(fp, "%s\n", aux);
+		cont++;
+	}
+
+	fclose(fp);
+	fp = fopen("Dados/fsize.data", "r");
+
+	for (int i = 0; i <= cont; i++)
+		fscanf(fp, "%s\n", aux);
+	
+	fclose(fp);
+
+	return aux;
+}
+
+// Esta função transfere um arquivo do servidor para o cliente
+char *get(char *arquivo, int sockfd) {
+	
+	// Adiciona o diretório correto ao nome do arquivo
+	char endarq[] = "Arquivos/", *msg = malloc(MAX);
+	strcat(endarq, arquivo);
+	printf("Arquivo: %s\n", endarq);
+
+	// Verifica se o arquivo está no servidor
+	FILE *fp = fopen(endarq, "r");
+	if (fp) {
+		// O servidor precisa descobrir o tamanho o arquivo
+		// Primeiro, o buffer guardará o tamanho do arquivo
+		fclose (fp);
+		char tam[MAX];
+		strcpy(tam, encontrafsize(arquivo));
+		printf("Tamanho: %s\n", tam);
+
+		// Envia o tamanho do arquivo
+		write(sockfd, tam, MAX);
+		//read(sockfd, tam, MAX);
+
+		printf("foi");
+		// O buffer agora recebe o tamanho do arquivo+1 para contar com o EOF
+		unsigned tamanho = atoi(tam);
+		char *buff = malloc(tamanho+1);
+
+		// Transfere o arquivo para o buffer e envia
+		fp = fopen(endarq, "r");
+		fread(buff, 1, tamanho+1, fp);
+		write(sockfd, buff, tamanho+1);
+		read(sockfd, buff, MAX);
+		fclose(fp);
+
+		// Exclui o arquivo enviado da lista de arquivos e o deleta
+		if (remarq(endarq) == 0) { // Tudo ok
+			remove(endarq);
+			strcpy(msg, "Arquivo enviado com sucesso!");
+		} else { //Erro
+			adcarq(endarq, tam); // Readiciona o arquivo para manter a consistência
+			strcpy(msg, "Falha na transferência!");
+		}
 	}
 
 	return msg;
@@ -166,6 +316,28 @@ char *trataLogin(int logado) {
 	return msg;
 }
 
+char *errmsg(int cmd) {
+
+	char *erro = malloc(MAX);
+
+	switch(cmd) {
+
+		case -1:
+			strcpy(erro, "Comando inválido!");
+			break;
+
+		case -2:
+			strcpy(erro, "Argumentos incorretos!");
+			break;
+		
+		case -3:
+			strcpy(erro, "Arquivo inexistente!");
+			break;
+	}
+	
+	return erro;
+}
+
 // Esta função decodifica o comando enviado pelo cliente
 char *decodcmd(Comando cmd, int sockfd, int *logado) {
 
@@ -178,13 +350,17 @@ char *decodcmd(Comando cmd, int sockfd, int *logado) {
 				return login(cmd.arg1, cmd.arg2, logado);
 			
 			case 2: // put
-				return put(cmd.arg1, atoi(cmd.arg2), sockfd);
+				return put(cmd.arg1, cmd.arg2, sockfd);
 
 			case 3: // get
-				break;
+				puts("Comando get");
+				return get(cmd.arg1, sockfd);
 			
 			case 4: // ls
 				return ls();
+			
+			default:
+				return errmsg(cmd.comando);
 		}
 	}
 	// else {
@@ -231,7 +407,7 @@ void ftp(int sockfd) {
 
 		// Decodifica o comando recebido
 		char *resposta = decodcmd(cmd, sockfd, &logado);
-		printf("%s\n", resposta);
+		//printf("%s\n", resposta);
 		// Envia uma resposta ao cliente
 		write(sockfd, resposta, strlen(resposta));
 		free(resposta);
