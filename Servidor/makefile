@@ -1,22 +1,16 @@
 CC=gcc
 CFLAGS=-g -Wall
-SRC=client.c server.c
 OBJ= $(SRC:.c=.o)
 
-all: $(EXEC)
+all:	ftpserver
 
-@echo "Vou começar a compilação"
+ftpserver:	server.o	ftp.o	arquivos.o
+	gcc	server.o	ftp.o	arquivos.o	-o	ftpserver
 
-teste: teste.o main.o
-	$(CC) -o $@ $^ 
+server.o:	server.c  ftp.c	arquivos.c
+	gcc	-c	-g	-Wall	server.c
+	gcc	-c	-g	-Wall	ftp.c
+	gcc	-c	-g	-Wall	arquivos.c
 
-%.o: %.c
-     $(CC) -o $@ -c $< $(CFLAGS)
-main.o: main.c teste.h
-     $(CC) -o $@ -c $< $(CFLAGS)
-.PHONY: clean mrproper
-clean: 
-      rm -rf *.o
- @echo "Compilaçao prontinha" 
-mrproper: clean
-      rm -rf $(EXEC)
+clean:
+	rm	-rf	*.o

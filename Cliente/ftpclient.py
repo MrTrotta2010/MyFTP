@@ -46,9 +46,11 @@ def codcomando (entrada):
             aux.append(' ')
         elif comando == 2:
             tam = tamarq(aux[1])
-            aux.append(str(tam))
             if tam < 0:
                 comando = -3
+                aux.append(' ')
+            else:
+                aux.append(str(tam))
         else:
             comando = -2
             aux.append(' ')
@@ -70,6 +72,7 @@ def envia (arquivo, tamanho, sock):
         dados = arq.read()
         arq.close()
         sock.sendall(dados)
+        os.remove(arquivo)
     
     except:
         return 1
@@ -81,15 +84,16 @@ def recebe (arquivo, sock):
 
     # Recebe o tamanho do arquivo
     tamanho = (sock.recv(MAX)).decode()
-    sock.sendall("Ok".encode())
 
     # Gambiarra para tirar os caracteres inválidos e deixar somente o tamanho do arquivo
     tamanho = tamanho.split('\x00')[0]
     tamanho = int(tamanho)
 
+    if tamanho == -1:
+        return
+
     # Recebe o arquivo como uma string e salva num arquivo
-    arqstr = (sock.recv(tamanho+1)).decode()
-    sock.sendall("Ok".encode())
+    arqstr = (sock.recv(tamanho)).decode()
     
     try:
         arq = open(arquivo, "w")
@@ -97,9 +101,8 @@ def recebe (arquivo, sock):
         arq.close()
     except:
         os.remove(arquivo)
-        return 1
+        return
     
-    return 0
 
 def ftp (sock):
 
@@ -120,6 +123,7 @@ def ftp (sock):
 
         # Envia os dados e agurda resposta
         try:
+            #print('Comando:',comando,' - Args:', arg1, arg2)
             sock.sendall((str(comando)).encode())
             sock.recv(MAX)
 
@@ -131,7 +135,6 @@ def ftp (sock):
 
         except:
             print("Servidor desconectado...")
-            print('closing socket')
             sock.close()
             break
 
@@ -140,17 +143,21 @@ def ftp (sock):
             if envia(arg1, arg2, sock) != 0:
                 print("Falha na transferência!")
 
-        # Se o comando for get, recebe o arquivo
+        # Se o comando for get, recebe o arquivo#include <sys/_types.h>
         if comando == 3:
-            if recebe(arg1, sock) != 0:
-                print("Falha na transferência!")
+            recebe(arg1, sock)
 
         resposta = (sock.recv(MAX)).decode()
 
         if comando == 4:
-            resposta = '\u256D\n'+'\n'.join(['\u251C '+x for x in (resposta.split('\n'))[:-1]])+'\n\u2570'
+            temp = ['\u251C '+x for x in (resposta.split('\n'))[:-1]]
+            if len(temp) > 0:
+                print('\u256D\n'+'\n'.join(temp)+'\n\u2570\n')
+            else:
+                print(resposta, '\n')
 
-        print(resposta, '\n')
+        else:
+            print(resposta, '\n')
 
 if __name__ == "__main__":
 
