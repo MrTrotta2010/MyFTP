@@ -2,7 +2,7 @@ import socket
 import sys
 import os
 
-MAX = 8192
+MAX = 256
 
 # Esta função recebe um arquivo e retorna seu tamanho
 def tamarq (arquivo):
@@ -34,11 +34,14 @@ def codcomando (entrada):
     elif aux[0] == 'ls':
         comando = 4
 
+    elif aux[0] == 'exit':
+        comando = 5
+
     else:
         return comando, ' ', ' '
 
     if len(aux) == 1:
-        if comando != 4:
+        if comando != 4 and comando != 5:
             comando = -2
         aux += [' ', ' ']
 
@@ -138,12 +141,6 @@ def ftp (sock):
         entrada = ''
         while (entrada == ''):
             entrada = input('>> ')
-
-        # Verifica o comando exit, que encerra a conexão
-        if (entrada == 'exit'):
-            print('Encerrando conexão...')
-            sock.close()
-            break
         
         # Codifica o comando
         comando, arg1, arg2 = codcomando(entrada)
@@ -151,22 +148,26 @@ def ftp (sock):
         # Envia os dados e agurda resposta
         try:
             #print('Comando:',comando,' - Args:', arg1, arg2)
-            aux = str(comando)
-            aux += (MAX-len(aux))*'\0'
+            aux = str(comando).replace('\0', '')
+            aux += ((MAX-len(aux)-1)*'\0')+'\0'
             sock.sendall(aux.encode())
 
-            aux = arg1
-            aux += (MAX-len(aux))*'\0'
+            aux = arg1.replace('\0', '')
+            aux += ((MAX-len(aux)-1)*'\0')+'\0'
             sock.sendall((aux).encode())
 
-            aux = arg2
-            aux += (MAX-len(aux))*'\0'
+            aux = arg2.replace('\0', '')
+            aux += ((MAX-len(aux)-1)*'\0')+'\0'
             sock.sendall((aux).encode())
 
-        except Exception as e:
-            #print("Servidor desconectado...")
-            print(e)
+        except:
+            print("Servidor desconectado...")
             sock.close()
+            break
+
+        # Verifica o comando exit, que encerra a conexão
+        if (entrada == 'exit'):
+            print('Encerrando conexão...')
             break
 
         # Se o comando for put, envia o arquivo
