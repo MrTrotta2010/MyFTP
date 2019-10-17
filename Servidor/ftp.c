@@ -292,27 +292,29 @@ void ftp(int sockfd) {
 	char *login = NULL;
 	Comando cmd;
 
-	while (1) {
+	while (TRUE) {
 
 		bzero(buff, MAX);
 		bzero(cmd.arg1, MAX);
 		bzero(cmd.arg2, MAX);
 
-		// Recebe o comando do cliente e guarda os argumentos 
-		read(sockfd, buff, MAX);
+		// Recebe o comando do cliente e guarda os argumentos
+		read(sockfd, buff, 256);
 
-		read(sockfd, cmd.arg1, MAX);
+		read(sockfd, cmd.arg1, 256);
 
-		read(sockfd, cmd.arg2, MAX);
+		read(sockfd, cmd.arg2, 256);
 
 		cmd.comando = atoi(buff);
 		
 		// Verifica se o comando é exit
+		if (cmd.comando == 5) {
+			break;
+		}
 
 		// Decodifica o comando recebido
-		//printf("Comando: %d - Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
-		char *resposta = decodcmd(cmd, sockfd, &login);
-		write(sockfd, resposta, strlen(resposta));
-		free(resposta);
+		bzero(buff, MAX);
+		strcpy(buff, decodcmd(cmd, sockfd, &login));
+		write(sockfd, buff, MAX);
 	} 
 }

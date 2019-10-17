@@ -34,29 +34,35 @@ int main(int argc, char **argv) {
 	else
 		printf("Conectado à porta %s!\n", argv[1]); 
 
-	// Agora, o server aguarda conexões 
-	if ((listen(sockfd, 5)) != 0) { 
-		printf("Falha na conexão!\n"); 
-		exit(4); 
-	} 
-	else
-		printf("Na escuta...\n");
+	while(TRUE){
+		// Agora, o server aguarda conexões 
+		if ((listen(sockfd, 5)) != 0) { 
+			printf("Falha na conexão!\n"); 
+			exit(4); 
+		} 
+		else
+			printf("Na escuta...\n");
 
-	len = sizeof(cli); 
+		len = sizeof(cli); 
 
-	// Aceita o pacote do cliente 
-	connfd = accept(sockfd, (SA*)&cli, &len); 
-	if (connfd < 0) { 
-		printf("O servidor recusou o cliente!\n"); 
-		exit(5); 
-	} 
-	else
-		printf("O servidor aceitou o cliente!\n\n"); 
+		// Aceita o pacote do cliente 
+		connfd = accept(sockfd, (SA*)&cli, &len); 
+		if (connfd < 0) { 
+			printf("O servidor recusou o cliente!\n"); 
+			exit(5); 
+		} 
+		else {
+			struct in_addr ipCliente = cli.sin_addr;
+			char ip[32];
+			inet_ntop(AF_INET, &ipCliente, ip, 32);
+			printf("O servidor aceitou o cliente!\nIP: %s\n", ip);
+		}
 
-	// Agora o servidor aguarda os comandos do cliente 
-	ftp(connfd); 
+		// Agora o servidor aguarda os comandos do cliente 
+		ftp(connfd); 
 
-	puts("Conexão encerrada");
+		printf("Conexão encerrada\n\n");
 
-	close(sockfd); 
-} 
+	}
+	//close(sockfd);
+}

@@ -8,7 +8,7 @@
 #include <string.h> 
 #include <sys/types.h>
 
-#define MAX 8192
+#define MAX 256
 #define SA struct sockaddr
 #define TRUE 1
 #define FALSE 0
