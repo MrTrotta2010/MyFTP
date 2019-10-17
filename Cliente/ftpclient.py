@@ -199,6 +199,10 @@ if __name__ == "__main__":
     sock.setblocking(True)
 
     # Conecta ao servidor
+    if len(sys.argv) != 3:
+        print('Modo de uso: $ python ftpclient.py <ip_servidor> <porta>')
+        exit(2)
+        
     endereco = (sys.argv[1], int(sys.argv[2]))
 
     try:
