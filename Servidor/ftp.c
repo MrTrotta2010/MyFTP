@@ -147,12 +147,15 @@ char *get(char *arquivo, int sockfd) {
 				// O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
 				fread(buff, 1, min(MAX, brestantes), fp);
 				int benviados = write(sockfd, buff, min(MAX, brestantes));
-				printf("Enviados %d\n", benviados);
+				//printf("Enviados %d\n", benviados);
 				brestantes -= benviados; 
 			}
 			fclose(fp);
 		} else {
-			puts("2");
+            bzero(buff, MAX);
+            strcpy(buff, "-1");
+    		write(sockfd, buff, MAX);
+	    	strcpy(msg, "Falha na transferência!");
 		}
 
 		// Exclui o arquivo enviado da lista de arquivos e o deleta
@@ -164,7 +167,9 @@ char *get(char *arquivo, int sockfd) {
 			strcpy(msg, "Falha na transferência!");
 		}
 	} else {
-		char buff[MAX] = "-1";
+		char buff[MAX];
+        bzero(buff, MAX);
+        strcpy(buff, "-1");
 		write(sockfd, buff, MAX);
 		strcpy(msg, "Arquivo inexistente!");
 	}
@@ -273,7 +278,7 @@ void ftp(int sockfd) {
 		// Verifica se o comando é exit
 
 		// Decodifica o comando recebido
-		printf("Comando: %d - Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
+		//printf("Comando: %d - Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 		char *resposta = decodcmd(cmd, sockfd, &logado);
 		write(sockfd, resposta, strlen(resposta));
 		free(resposta);

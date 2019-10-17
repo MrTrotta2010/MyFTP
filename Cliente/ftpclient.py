@@ -121,7 +121,7 @@ def recebe (arquivo, sock):
             arq.write(dados)
             brestantes -= blidos
             brecebidos += blidos
-            aux = brecebidos/tamanho
+            aux = brecebidos/tamanho*100
             print("Recebendo... - "+"{0:.2f}".format(aux)+"%", end='\r')
     
         arq.close()
