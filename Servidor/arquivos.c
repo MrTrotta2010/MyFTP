@@ -10,9 +10,14 @@ unsigned tamarq(FILE *arq) {
 }
 
 // Essa função recebe o nome de um arquivo e, caso ele exista na base de dados do servidor, busca e retorna seu tamanho em bytes
-char *encontrafsize(char *arquivo, unsigned *tamanho) {
+char *encontrafsize(char *login, char *arquivo, unsigned *tamanho) {
 
-	FILE *fp = fopen("Dados/files.data", "r");
+    char arqname[2048];
+    bzero(arqname, 2048);
+    strcpy(arqname, "Dados/");
+    strcat(arqname, login);
+    strcat(arqname, "_files.data");
+	FILE *fp = fopen(arqname, "r");
 	int cont = 0;
 	char *aux = malloc(MAX);
 	bzero(aux, MAX);
@@ -23,7 +28,11 @@ char *encontrafsize(char *arquivo, unsigned *tamanho) {
 	}
 
 	fclose(fp);
-	fp = fopen("Dados/fsize.data", "r");
+    bzero(arqname, 2048);
+    strcpy(arqname, "Dados/");
+    strcat(arqname, login);
+    strcat(arqname, "_fsize.data");
+	fp = fopen(arqname, "r");
 
 	for (int i = 0; i <= cont; i++)
 		fscanf(fp, "%s\n", aux);
@@ -36,14 +45,20 @@ char *encontrafsize(char *arquivo, unsigned *tamanho) {
 }
 
 //Esta função adiciona uma entrada à lista de arquivos
-int adcarq(char *arquivo, char *tamanho) {
+int adcarq(char *login, char *arquivo, char *tamanho) {
 	
 	int existe = FALSE;
 	char n[MAX];
+    char arqname[2048];
     bzero(n, MAX);
+
+    bzero(arqname, 2048);
+    strcpy(arqname, "Dados/");
+    strcat(arqname, login);
+    strcat(arqname, "_files.data");
 	
 	// Verifica se o arquivo já estava na lista de arquivos
-	FILE *fp = fopen("Dados/files.data", "r");
+	FILE *fp = fopen(arqname, "r");
 	if (fp) {
 		while (!feof(fp)) {
 			fscanf(fp, "%s\n", n);
@@ -62,7 +77,7 @@ int adcarq(char *arquivo, char *tamanho) {
 	// Caso não esteja, adiciona
 	if (!existe) {
 		//puts("Ainda n tem");
-		fp = fopen("Dados/files.data", "a");
+		fp = fopen(arqname, "a");
 		if (fp) {
 			fprintf(fp, "%s\n", arquivo);
 			fclose(fp);
@@ -71,7 +86,11 @@ int adcarq(char *arquivo, char *tamanho) {
 			return 1;
 		}
 
-		fp = fopen("Dados/fsize.data", "a");
+        bzero(arqname, 2048);
+        strcpy(arqname, "Dados/");
+        strcat(arqname, login);
+        strcat(arqname, "_fsize.data");
+		fp = fopen(arqname, "a");
 		if (fp) {
 			fprintf(fp, "%s\n", tamanho);
 			fclose(fp);
@@ -85,9 +104,14 @@ int adcarq(char *arquivo, char *tamanho) {
 }
 
 // Esta função remove uma entrada na lista de arquivos
-int remarq(char *arquivo) {
+int remarq(char *login, char *arquivo) {
 
-	FILE *alvo = fopen("Dados/files.data", "r");
+    char arqname[2048];
+    bzero(arqname, 2048);
+    strcpy(arqname, "Dados/");
+    strcat(arqname, login);
+    strcat(arqname, "_files.data");
+	FILE *alvo = fopen(arqname, "r");
 	unsigned tamanho = tamarq(alvo) - strlen(arquivo);
 
 	char arqstr[tamanho], aux[MAX];
@@ -116,7 +140,7 @@ int remarq(char *arquivo) {
 
     if (achou) {
         // Sobrescreve o arquivo com a nova lista
-        alvo = fopen("Dados/files.data", "w");
+        alvo = fopen(arqname, "w");
         if (alvo) {
             fprintf(alvo, "%s", arqstr);
             fclose(alvo);
@@ -126,7 +150,11 @@ int remarq(char *arquivo) {
         }
 
         // Abre o arquivo de tamanhos
-        alvo = fopen("Dados/fsize.data", "r");
+        bzero(arqname, MAX);
+        strcpy(arqname, "Dados/");
+        strcat(arqname, login);
+        strcat(arqname, "_fsize.data");
+        alvo = fopen(arqname, "r");
         FILE *temp = fopen("Dados/temp", "w");
 
         if (alvo) {
@@ -146,8 +174,8 @@ int remarq(char *arquivo) {
         }
 
         // Apaga o arquivo antigo e renomeia o novo
-        remove("Dados/fsize.data");
-        rename("Dados/temp", "Dados/fsize.data");
+        remove(arqname);
+        rename("Dados/temp", arqname);
   
     } else {
         return 1;

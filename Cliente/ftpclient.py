@@ -10,7 +10,6 @@ def tamarq (arquivo):
     tam = 0
     try:
         tam = os.path.getsize(arquivo)
-        print(tam/MAX)
     except:
         tam = -1
 

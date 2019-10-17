@@ -22,16 +22,16 @@ typedef struct {
 /*FUNÇÕES DO SERVIDOR FTP*/
 void ftp(int sockfd);
 int argumentos(int argc, char ** argv);
-char *decodcmd(Comando cmd, int sockfd, int *logado);
-char *trataLogin(int logado, int comando, int sockfd);
-char *login(char *usuario, char *senha, int *logado);
-char *ls();
-char *put(char *arquivo, char *tam, int sockfd);
-char *get(char *arquivo, int sockfd);
+char *decodcmd(Comando cmd, int sockfd, char **logado);
+char *trataLogin(char *logado, int comando, int sockfd);
+char *login(char *usuario, char *senha, char **loginuser);
+char *ls(char *login);
+char *put(char *arquivo, char *tam, int sockfd, char *login);
+char *get(char *arquivo, int sockfd, char *login);
 char *errmsg(int cmd);
 
 /*FUNÇÕES DE MANIPULAÇÃO DE ARQUIVOS*/
 unsigned tamarq(FILE *arq);
-char *encontrafsize(char *arquivo, unsigned *tamanho);
-int adcarq(char *arquivo, char *tamanho);
-int remarq(char *arquivo);
+char *encontrafsize(char *login, char *arquivo, unsigned *tamanho);
+int adcarq(char *login, char *arquivo, char *tamanho);
+int remarq(char *login, char *arquivo);
