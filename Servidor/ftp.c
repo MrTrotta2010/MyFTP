@@ -57,17 +57,20 @@ char *ls() {
 	return lista;
 }
 
+unsigned long min (int a, unsigned b) {
+	if (a < b) return a;
+	return b;
+}
+
 // Esta função transfere um arquivo do cliente para o servidor
 char *put(char *arquivo, char *tam, int sockfd) {
-	
-	unsigned tamanho = atoi(tam); 
+	unsigned tamanho = strtoul(tam, NULL, 10); 
+	unsigned brestantes = tamanho;
+	printf("Tamanho: %u\n", brestantes);
+	//getchar();
+
 	// O buffer tem o tamanho do arquivo+1 para contar com o EOF
-	char buff[tamanho+1], *msg = malloc(MAX);
-
-	bzero(buff, tamanho+1);
-
-	// Recebe o arquivo
-	read(sockfd, buff, tamanho+1);
+	char buff[MAX], *msg = malloc(MAX);
 
 	// Cria um arquivo de mesmo nome na pasta de arquivos do servidor
 	char novoarq[MAX];
@@ -75,21 +78,33 @@ char *put(char *arquivo, char *tam, int sockfd) {
 	strcat(novoarq, "Arquivos/");
 	strcat(novoarq, arquivo);
 	FILE *arq = fopen(novoarq, "w");
+	unsigned brecebidos = 0;
 
-	// Salva o arquivo recebido no arquivo criado
 	if (arq) {
-		fprintf(arq, "%s", buff);
+		// Recebe o arquivo em pedaços
+		while (brestantes > 0) {
+			unsigned blidos;
+			bzero(buff, MAX);
+			blidos = read(sockfd, buff, min(MAX, brestantes));
+
+			// Salva os dados recebidos no arquivo criado
+			fwrite(buff, 1, blidos, arq);
+			brestantes -= blidos;
+			brecebidos += blidos;
+			//printf("Restam %u bytes de %u\n", brestantes, tamanho);
+		}
+		fclose(arq);
+		//printf("%u bytes recebido", brecebidos);
+
+		// Salva o arquivo no arquivo de arquivos
 		if (adcarq(arquivo, tam) == 0) {
 			strcpy(msg, "Arquivo transferido com sucesso!");
 			//printf("%u\n", tamarq(arq));
-			fclose(arq);
 		} else {
-			fclose(arq);
 			remove(novoarq);
 		}
 	} else {
 		strcpy(msg, "Falha na transferência!");
-		fclose(arq);
 	}
 
 	return msg;
@@ -116,18 +131,29 @@ char *get(char *arquivo, int sockfd) {
 		bzero(tam, MAX);
 		strcpy(tam, encontrafsize(arquivo, &tamanho));
 
+
 		// Envia o tamanho do arquivo
 		write(sockfd, tam, MAX);
 
-		// O buffer agora recebe o tamanho do arquivo+1 para contar com o EOF
-		char buff[tamanho];
-		bzero(buff, tamanho);
+		char buff[MAX];
+		unsigned brestantes = tamanho;
 
-		// Transfere o arquivo para o buffer e envia
 		fp = fopen(endarq, "r");
-		fread(buff, 1, tamanho, fp);
-		write(sockfd, buff, tamanho);
-		fclose(fp);
+		// Transfere o arquivo em pedaços
+		if (fp) {
+			while (brestantes > 0) {
+				bzero(buff, MAX);
+				// Leio um pedaço do arquivo
+				// O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
+				fread(buff, 1, min(MAX, brestantes), fp);
+				int benviados = write(sockfd, buff, min(MAX, brestantes));
+				printf("Enviados %d\n", benviados);
+				brestantes -= benviados; 
+			}
+			fclose(fp);
+		} else {
+			puts("2");
+		}
 
 		// Exclui o arquivo enviado da lista de arquivos e o deleta
 		if (remarq(arquivo) == 0) { // Tudo ok
@@ -237,20 +263,17 @@ void ftp(int sockfd) {
 
 		// Recebe o comando do cliente e guarda os argumentos 
 		read(sockfd, buff, MAX);
-		write(sockfd, "Ok", 2);
 
 		read(sockfd, cmd.arg1, MAX);
-		write(sockfd, "Ok", 2);
 
 		read(sockfd, cmd.arg2, MAX);
-		write(sockfd, "Ok", 2);
 
 		cmd.comando = atoi(buff);
 		
 		// Verifica se o comando é exit
 
 		// Decodifica o comando recebido
-		//printf("Comando: %d - Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
+		printf("Comando: %d - Argumentos: %s, %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 		char *resposta = decodcmd(cmd, sockfd, &logado);
 		write(sockfd, resposta, strlen(resposta));
 		free(resposta);

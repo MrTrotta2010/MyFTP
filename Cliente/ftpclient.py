@@ -2,7 +2,7 @@ import socket
 import sys
 import os
 
-MAX = 80
+MAX = 8192
 
 # Esta função recebe um arquivo e retorna seu tamanho
 def tamarq (arquivo):
@@ -10,6 +10,7 @@ def tamarq (arquivo):
     tam = 0
     try:
         tam = os.path.getsize(arquivo)
+        print(tam/MAX)
     except:
         tam = -1
 
@@ -18,7 +19,8 @@ def tamarq (arquivo):
 # Função que recebe a entrada do usuário, faz o parsing e devolve o comando e os argumentos
 def codcomando (entrada):
 
-    aux = entrada.split()
+    aux = entrada.replace('\n', '')
+    aux = aux.split()
     comando = -1
 
     if aux[0] == 'login':
@@ -69,12 +71,24 @@ def envia (arquivo, tamanho, sock):
     
     try:
         arq = open(arquivo, "rb")
-        dados = arq.read()
+        brestantes = int(tamanho)
+
+        while brestantes > 0:
+            # Leio um pedaço do arquivo
+            # O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
+            dados = arq.read(min(MAX, int(brestantes)))
+            sock.sendall(dados)
+            brestantes -= len(dados)
+            aux = (float(tamanho)-brestantes)/float(tamanho)*100
+            #print("Enviando... - "+str(aux)[:3]+"%")
+            print("Enviando... - "+"{0:.2f}".format(aux)+"%", end='\r')
+            
+
         arq.close()
-        sock.sendall(dados)
         os.remove(arquivo)
     
-    except:
+    except Exception as e:
+        print(e)
         return 1
     
     return 0
@@ -92,14 +106,28 @@ def recebe (arquivo, sock):
     if tamanho == -1:
         return
 
-    # Recebe o arquivo como uma string e salva num arquivo
-    arqstr = (sock.recv(tamanho)).decode()
-    
+    brestantes = tamanho
+    brecebidos = 0
+
     try:
-        arq = open(arquivo, "w")
-        arq.write(arqstr)
+        arq = open(arquivo, "wb")
+
+        # Recebe o arquivo em pedaços e salva em outro arquivo
+        while brestantes > 0:
+            dados = sock.recv(min(MAX, brestantes))
+            blidos = len(dados)
+
+            # Salva os dados recebidos no arquivo criado
+            arq.write(dados)
+            brestantes -= blidos
+            brecebidos += blidos
+            aux = brecebidos/tamanho
+            print("Recebendo... - "+"{0:.2f}".format(aux)+"%", end='\r')
+    
         arq.close()
-    except:
+
+    except Exception as e:
+        print(e)
         os.remove(arquivo)
         return
     
@@ -124,17 +152,21 @@ def ftp (sock):
         # Envia os dados e agurda resposta
         try:
             #print('Comando:',comando,' - Args:', arg1, arg2)
-            sock.sendall((str(comando)).encode())
-            sock.recv(MAX)
+            aux = str(comando)
+            aux += (MAX-len(aux))*'\0'
+            sock.sendall(aux.encode())
 
-            sock.sendall((arg1).encode())
-            sock.recv(MAX)
+            aux = arg1
+            aux += (MAX-len(aux))*'\0'
+            sock.sendall((aux).encode())
 
-            sock.sendall((arg2).encode())
-            sock.recv(MAX)
+            aux = arg2
+            aux += (MAX-len(aux))*'\0'
+            sock.sendall((aux).encode())
 
-        except:
-            print("Servidor desconectado...")
+        except Exception as e:
+            #print("Servidor desconectado...")
+            print(e)
             sock.close()
             break
 
@@ -143,8 +175,8 @@ def ftp (sock):
             if envia(arg1, arg2, sock) != 0:
                 print("Falha na transferência!")
 
-        # Se o comando for get, recebe o arquivo#include <sys/_types.h>
-        if comando == 3:
+        # Se o comando for get, recebe o arquivo
+        elif comando == 3:
             recebe(arg1, sock)
 
         resposta = (sock.recv(MAX)).decode()
@@ -165,6 +197,7 @@ if __name__ == "__main__":
 
     # Cria um socket TCP
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setblocking(True)
 
     # Conecta ao servidor
     endereco = (sys.argv[1], int(sys.argv[2]))
