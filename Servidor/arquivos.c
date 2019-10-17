@@ -18,25 +18,17 @@ char *encontrafsize(char *login, char *arquivo, unsigned *tamanho) {
     strcat(arqname, login);
     strcat(arqname, "_files.data");
 	FILE *fp = fopen(arqname, "r");
-	int cont = 0;
+	char n[MAX];
 	char *aux = malloc(MAX);
 	bzero(aux, MAX);
+	bzero(n, MAX);
 
-	for (int i = 0; strcmp(aux, arquivo) != 0; i++) {
-		fscanf(fp, "%s\n", aux);
-		cont++;
+	while (strcmp(n, arquivo) != 0) {
+		bzero(aux, MAX);
+		bzero(n, MAX);
+		fscanf(fp, "%s %s\n", n, aux);
 	}
 
-	fclose(fp);
-    bzero(arqname, 2048);
-    strcpy(arqname, "Dados/");
-    strcat(arqname, login);
-    strcat(arqname, "_fsize.data");
-	fp = fopen(arqname, "r");
-
-	for (int i = 0; i <= cont; i++)
-		fscanf(fp, "%s\n", aux);
-	
 	fclose(fp);
 
 	*tamanho = atoi(aux);
@@ -48,9 +40,10 @@ char *encontrafsize(char *login, char *arquivo, unsigned *tamanho) {
 int adcarq(char *login, char *arquivo, char *tamanho) {
 	
 	int existe = FALSE;
-	char n[MAX];
-    char arqname[2048];
+	char n[MAX], t[MAX];
+	char arqname[2048];
     bzero(n, MAX);
+    bzero(t, MAX);
 
     bzero(arqname, 2048);
     strcpy(arqname, "Dados/");
@@ -61,7 +54,7 @@ int adcarq(char *login, char *arquivo, char *tamanho) {
 	FILE *fp = fopen(arqname, "r");
 	if (fp) {
 		while (!feof(fp)) {
-			fscanf(fp, "%s\n", n);
+			fscanf(fp, "%s %s\n", n, t);
 			if (strcmp(n, arquivo) == 0) {
 				existe = TRUE;
 				//puts("Já tem");
@@ -79,23 +72,9 @@ int adcarq(char *login, char *arquivo, char *tamanho) {
 		//puts("Ainda n tem");
 		fp = fopen(arqname, "a");
 		if (fp) {
-			fprintf(fp, "%s\n", arquivo);
+			fprintf(fp, "%s %s\n", arquivo, tamanho);
 			fclose(fp);
 		} else {
-			fclose(fp);
-			return 1;
-		}
-
-        bzero(arqname, 2048);
-        strcpy(arqname, "Dados/");
-        strcat(arqname, login);
-        strcat(arqname, "_fsize.data");
-		fp = fopen(arqname, "a");
-		if (fp) {
-			fprintf(fp, "%s\n", tamanho);
-			fclose(fp);
-		} else {
-			fclose(fp);
 			return 1;
 		}
 	}
@@ -111,75 +90,37 @@ int remarq(char *login, char *arquivo) {
     strcpy(arqname, "Dados/");
     strcat(arqname, login);
     strcat(arqname, "_files.data");
+
 	FILE *alvo = fopen(arqname, "r");
-	unsigned tamanho = tamarq(alvo) - strlen(arquivo);
-
-	char arqstr[tamanho], aux[MAX];
-	int cont = 0, achou = FALSE;
-
-	bzero(arqstr, tamanho);
-	bzero(aux, MAX);
+	FILE *novo = fopen("Dados/temp", "w");
+	
+	char n[MAX], t[MAX];
 
 	if (alvo) {
-		// Percorre o arquivo antigo copiando para uma string as entradas diferentes do nome do arquivo
-		while (!feof(alvo)) {
-			fscanf(alvo, "%s\n", aux);
-			if (strcmp(arquivo, aux) != 0 && !achou) {
-				strcat(arqstr, aux);
-				cont++; //Registra a linha onde estava o arquivo
-			} else {
-				achou = TRUE;
+		if (novo) {
+			// Percorre o arquivo antigo copiando para uma string as entradas diferentes do nome do arquivo
+			while (!feof(alvo)) {
+				bzero(n, MAX);
+				bzero(t, MAX);
+				fscanf(alvo, "%s %s\n", n, t);
+				if (strcmp(arquivo, n) != 0) {
+					fprintf(novo, "%s %s\n", n, t);
+				}
 			}
+			fclose(alvo);
+			fclose(novo);
+		} else {
+			fclose(alvo);
+			return 1;
 		}
-		fclose(alvo);
-
 	} else {
-		fclose(alvo);
+		if (novo) fclose(novo);
 		return 1;
 	}
 
-    if (achou) {
-        // Sobrescreve o arquivo com a nova lista
-        alvo = fopen(arqname, "w");
-        if (alvo) {
-            fprintf(alvo, "%s", arqstr);
-            fclose(alvo);
-        } else {
-            fclose(alvo);
-            return 1;
-        }
-
-        // Abre o arquivo de tamanhos
-        bzero(arqname, MAX);
-        strcpy(arqname, "Dados/");
-        strcat(arqname, login);
-        strcat(arqname, "_fsize.data");
-        alvo = fopen(arqname, "r");
-        FILE *temp = fopen("Dados/temp", "w");
-
-        if (alvo) {
-            // Percorre o arquivo de tamanhos até a linha onde estáo tamanho do arquivo
-            for (int i = 0; !feof(alvo); i++) {
-                fscanf(alvo, "%s\n", aux);
-                if (i != cont) {
-                    fprintf(temp, "%s\n", aux);
-                }
-            }
-            fclose(alvo);
-            fclose(temp);
-        } else {
-            fclose(alvo);
-            fclose(temp);
-            return 1;
-        }
-
-        // Apaga o arquivo antigo e renomeia o novo
-        remove(arqname);
-        rename("Dados/temp", arqname);
-  
-    } else {
-        return 1;
-    }
+	// Apaga o arquivo antigo e renomeia o novo
+	remove(arqname);
+	rename("Dados/temp", arqname);
 
 	return 0;
 }

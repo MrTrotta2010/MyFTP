@@ -14,25 +14,13 @@ int argumentos(int argc, char ** argv) {
 void assertfiles(char *usuario) {
 
     char arquivo[2048];
-    FILE *fp;
 
     // Verifica se o usuário tem os arquivos de dados
     bzero(arquivo, 2048);
     strcpy(arquivo, "Dados/");
     strcat(arquivo, usuario);
     strcat(arquivo, "_files.data");
-    fp = fopen(arquivo, "a");
-    if (fp) fclose(fp);
-    else fclose(fopen(arquivo, "w"));
-
-    bzero(arquivo, 2048);
-    strcpy(arquivo, "Dados/");
-    strcat(arquivo, usuario);
-    strcat(arquivo, "_fsize.data");
-    fp = fopen(arquivo, "a");
-    if (fp) fclose(fp);
-    else fclose(fopen(arquivo, "w"));
-
+    fclose(fopen(arquivo, "a"));
 }
 
 // Esta função realiza a autenticação do usuário no servidor
@@ -154,6 +142,7 @@ char *get(char *arquivo, int sockfd, char *login) {
 
 	// Verifica se o arquivo está no servidor
 	FILE *fp = fopen(endarq, "r");
+	puts("AI");
 
 	if (fp) {
 		// O servidor precisa descobrir o tamanho o arquivo
@@ -163,6 +152,7 @@ char *get(char *arquivo, int sockfd, char *login) {
 		unsigned tamanho;
 		bzero(tam, MAX);
 		strcpy(tam, encontrafsize(login, arquivo, &tamanho));
+		printf("tamanho: %s", tam);
 
 		// Envia o tamanho do arquivo
 		write(sockfd, tam, MAX);
@@ -183,20 +173,20 @@ char *get(char *arquivo, int sockfd, char *login) {
 				brestantes -= benviados; 
 			}
 			fclose(fp);
+
+			// Exclui o arquivo enviado da lista de arquivos e o deleta
+			if (remarq(login, arquivo) == 0) { // Tudo ok
+				remove(endarq);
+				strcpy(msg, "Arquivo transferido com sucesso!");
+			} else { //Erro
+				adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
+				strcpy(msg, "Falha na transferência!");
+			}
 		} else {
             bzero(buff, MAX);
             strcpy(buff, "-1");
     		write(sockfd, buff, MAX);
 	    	strcpy(msg, "Falha na transferência!");
-		}
-
-		// Exclui o arquivo enviado da lista de arquivos e o deleta
-		if (remarq(login, arquivo) == 0) { // Tudo ok
-			remove(endarq);
-			strcpy(msg, "Arquivo transferido com sucesso!");
-		} else { //Erro
-			adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
-			strcpy(msg, "Falha na transferência!");
 		}
 	} else {
 		char buff[MAX];
@@ -307,6 +297,8 @@ void ftp(int sockfd) {
 
 		cmd.comando = atoi(buff);
 		
+		printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
+
 		// Verifica se o comando é exit
 		if (cmd.comando == 5) {
 			break;
