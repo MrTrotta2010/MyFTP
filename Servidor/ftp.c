@@ -95,6 +95,8 @@ char *put(char *arquivo, char *tam, int sockfd, char *login) {
 	char novoarq[MAX];
 	bzero(novoarq, MAX);
 	strcat(novoarq, "Arquivos/");
+	strcat(novoarq, login);
+	strcat(novoarq, "/");
 	strcat(novoarq, arquivo);
 	FILE *arq = fopen(novoarq, "w");
 	unsigned brecebidos = 0;
@@ -137,22 +139,21 @@ char *get(char *arquivo, int sockfd, char *login) {
 	char endarq[2048], *msg = malloc(MAX);
 
     strcpy(endarq, "Arquivos/");
+    strcat(endarq, login);
+	strcat(endarq, "/");
 	strcat(endarq, arquivo);
 	//printf("Arquivo: %s\n", endarq);
 
 	// Verifica se o arquivo está no servidor
 	FILE *fp = fopen(endarq, "r");
-	puts("AI");
 
 	if (fp) {
 		// O servidor precisa descobrir o tamanho o arquivo
 		// Primeiro, o buffer guardará o tamanho do arquivo
-		fclose (fp);
 		char tam[MAX];
 		unsigned tamanho;
 		bzero(tam, MAX);
 		strcpy(tam, encontrafsize(login, arquivo, &tamanho));
-		printf("tamanho: %s", tam);
 
 		// Envia o tamanho do arquivo
 		write(sockfd, tam, MAX);
@@ -160,34 +161,27 @@ char *get(char *arquivo, int sockfd, char *login) {
 		char buff[MAX];
 		unsigned brestantes = tamanho;
 
-		fp = fopen(endarq, "r");
 		// Transfere o arquivo em pedaços
-		if (fp) {
-			while (brestantes > 0) {
-				bzero(buff, MAX);
-				// Leio um pedaço do arquivo
-				// O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
-				fread(buff, 1, min(MAX, brestantes), fp);
-				int benviados = write(sockfd, buff, min(MAX, brestantes));
-				//printf("Enviados %d\n", benviados);
-				brestantes -= benviados; 
-			}
-			fclose(fp);
-
-			// Exclui o arquivo enviado da lista de arquivos e o deleta
-			if (remarq(login, arquivo) == 0) { // Tudo ok
-				remove(endarq);
-				strcpy(msg, "Arquivo transferido com sucesso!");
-			} else { //Erro
-				adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
-				strcpy(msg, "Falha na transferência!");
-			}
-		} else {
+        while (brestantes > 0) {
             bzero(buff, MAX);
-            strcpy(buff, "-1");
-    		write(sockfd, buff, MAX);
-	    	strcpy(msg, "Falha na transferência!");
-		}
+            // Leio um pedaço do arquivo
+            // O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
+            fread(buff, 1, min(MAX, brestantes), fp);
+            int benviados = write(sockfd, buff, min(MAX, brestantes));
+            //printf("Enviados %d\n", benviados);
+            brestantes -= benviados; 
+        }
+        fclose(fp);
+
+        // Exclui o arquivo enviado da lista de arquivos e o deleta
+        if (remarq(login, arquivo) == 0) { // Tudo ok
+            remove(endarq);
+            strcpy(msg, "Arquivo transferido com sucesso!");
+        } else { //Erro
+            adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
+            strcpy(msg, "Falha na transferência!");
+        }
+        
 	} else {
 		char buff[MAX];
         bzero(buff, MAX);
@@ -297,7 +291,7 @@ void ftp(int sockfd) {
 
 		cmd.comando = atoi(buff);
 		
-		printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
+		//printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 
 		// Verifica se o comando é exit
 		if (cmd.comando == 5) {

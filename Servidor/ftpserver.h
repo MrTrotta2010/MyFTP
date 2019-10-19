@@ -32,6 +32,7 @@ char *errmsg(int cmd);
 
 /*FUNÇÕES DE MANIPULAÇÃO DE ARQUIVOS*/
 unsigned tamarq(FILE *arq);
+int exarq(char *arquivo, char *login);
 char *encontrafsize(char *login, char *arquivo, unsigned *tamanho);
 int adcarq(char *login, char *arquivo, char *tamanho);
 int remarq(char *login, char *arquivo);

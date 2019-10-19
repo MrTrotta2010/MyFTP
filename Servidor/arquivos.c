@@ -9,6 +9,31 @@ unsigned tamarq(FILE *arq) {
 	return tamanho;	
 }
 
+// Esta função verifica se um determinado arquivo existe para um determinado usuário
+int exarq(char *arquivo, char *login) {
+
+    char arqname[2048], n[MAX], t[MAX];
+    bzero(arqname, 2048);
+    bzero(n, MAX);
+    bzero(t, MAX);
+    strcpy(arqname, "Dados/");
+    strcat(arqname, login);
+    strcat(arqname, "_files.data");
+	FILE *fp = fopen(arqname, "r");
+
+    if (fp) {
+        while (!feof(fp)) {
+            fscanf(fp, "%s %s\n", n, t);
+            if (strcmp(arquivo, n) == 0) {
+                fclose(fp);
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 // Essa função recebe o nome de um arquivo e, caso ele exista na base de dados do servidor, busca e retorna seu tamanho em bytes
 char *encontrafsize(char *login, char *arquivo, unsigned *tamanho) {
 

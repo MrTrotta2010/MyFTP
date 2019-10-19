@@ -87,7 +87,6 @@ def envia (arquivo, tamanho, sock):
             
 
         arq.close()
-        os.remove(arquivo)
     
     except Exception as e:
         print(e)
