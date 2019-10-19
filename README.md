@@ -18,11 +18,11 @@ Implementação de um protocolo FTP como trabalho prático para a disciplina de 
 * Cliente: `$ python ftpclient.py <ip_servidor> <porta>`
 
 ## Funcionamento geral:
-    O programa do servidor, ao ser rodado, criará um socket e o atrelará à porta passada como argumento na execução e, em seguida, aguardará conexões. Com o servidor rodando, o programa do cliente pode ser executado diversas vezes para acessar os arquivos de diferentes usuários.
+O programa do servidor, ao ser rodado, criará um socket e o atrelará à porta passada como argumento na execução e, em seguida, aguardará conexões. Com o servidor rodando, o programa do cliente pode ser executado diversas vezes para acessar os arquivos de diferentes usuários.
 
-    Ao iniciar o cliente, ele se conectará ao IP e à porta expecíficados na execução e aguardará o login do usuário. O usuário não será capaz de executar nenhum comando sem antes fazer login. Feito o login, o usuário poderá enviar e recuperar qualquer número de arquivos do servidor, bem como listar os arquivos que estão lá. Vale ressaltar, no entanto, que um determinado usuário terá acesso somente aos seus arquivos no servidor e seus arquivos serão invisíveis aos outros usuários, isso porque cada usuário tem uma pasta associada a si no servidor, bem como um arquivo de controle que armazena os arquivos contidos em sua pasta.
+Ao iniciar o cliente, ele se conectará ao IP e à porta expecíficados na execução e aguardará o login do usuário. O usuário não será capaz de executar nenhum comando sem antes fazer login. Feito o login, o usuário poderá enviar e recuperar qualquer número de arquivos do servidor, bem como listar os arquivos que estão lá. Vale ressaltar, no entanto, que um determinado usuário terá acesso somente aos seus arquivos no servidor e seus arquivos serão invisíveis aos outros usuários, isso porque cada usuário tem uma pasta associada a si no servidor, bem como um arquivo de controle que armazena os arquivos contidos em sua pasta.
 
-    Para encerrar a sessão, o usuário deve digitar o comando exit, que encerrará o programa do cliente. Nesta versão do MyFTP, os usuários devem ser criados manualmente, como explicado a seguir.
+Para encerrar a sessão, o usuário deve digitar o comando exit, que encerrará o programa do cliente. Nesta versão do MyFTP, os usuários devem ser criados manualmente, como explicado a seguir.
 
 #### Criação de usuários:
 * Escolhidos um nome de usuário e uma senha, deve-se editar o arquivo _Servidor/Dados/usuarios.data_, adicionado uma linha que contém tais informações, nessa ordem, separados por espaço. Ex: _fulano 12345_.
