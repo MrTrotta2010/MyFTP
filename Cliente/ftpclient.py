@@ -37,6 +37,15 @@ def codcomando (entrada):
     elif aux[0] == 'exit':
         comando = 5
 
+    elif aux[0] == 'adduser':
+        comando = 6
+
+    elif aux[0] == 'rmuser':
+        comando = 7
+
+    elif aux[0] == 'passwd':
+        comando = 8
+
     else:
         return comando, ' ', ' '
 
@@ -46,7 +55,7 @@ def codcomando (entrada):
         aux += [' ', ' ']
 
     elif len(aux) == 2:
-        if comando == 3:
+        if comando in [3, 8, 7]:
             aux.append(' ')
         elif comando == 2:
             tam = tamarq(aux[1])
@@ -60,7 +69,7 @@ def codcomando (entrada):
             aux.append(' ')
     
     elif len(aux) == 3:
-        if comando > 1:
+        if comando not in [1, 6]:
             comando = -2
     
     else:
@@ -132,7 +141,6 @@ def recebe (arquivo, sock):
         os.remove(arquivo)
         return
     
-
 def ftp (sock):
 
     while (True):
@@ -189,6 +197,10 @@ def ftp (sock):
 
         else:
             print(resposta, '\n')
+
+        # Se o usuário foi removido, encerra o programa
+        if comando == 7:
+            break
 
 if __name__ == "__main__":
 

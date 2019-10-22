@@ -13,14 +13,14 @@ int argumentos(int argc, char ** argv) {
 
 void assertfiles(char *usuario) {
 
-    char arquivo[2048];
+	char arquivo[2048];
 
-    // Verifica se o usuário tem os arquivos de dados
-    bzero(arquivo, 2048);
-    strcpy(arquivo, "Dados/");
-    strcat(arquivo, usuario);
-    strcat(arquivo, "_files.data");
-    fclose(fopen(arquivo, "a"));
+	// Verifica se o usuário tem os arquivos de dados
+	bzero(arquivo, 2048);
+	strcpy(arquivo, "Dados/");
+	strcat(arquivo, usuario);
+	strcat(arquivo, "_files.data");
+	fclose(fopen(arquivo, "a"));
 }
 
 // Esta função realiza a autenticação do usuário no servidor
@@ -36,10 +36,10 @@ char *login(char *usuario, char *senha, char **loginuser) {
 
 		if (strcmp(u, usuario) == 0) {
 			if (strcmp(s, senha) == 0) {
-                *loginuser = malloc(2048);
+				*loginuser = malloc(2048);
 				strcpy(*loginuser, usuario);
 				strcpy(msg, "Login efetuado com sucesso!");
-                assertfiles(usuario);
+				assertfiles(usuario);
 				break;
 			}
 			strcpy(msg, "Senha incorreta!");
@@ -53,11 +53,11 @@ char *login(char *usuario, char *senha, char **loginuser) {
 // Esta função lista todos os arquivos do servidor
 char *ls(char *login) {
 
-    char arqname[2048];
-    bzero(arqname, 2048);
-    strcpy(arqname, "Dados/");
-    strcat(arqname, login);
-    strcat(arqname, "_files.data");
+	char arqname[2048];
+	bzero(arqname, 2048);
+	strcpy(arqname, "Dados/");
+	strcat(arqname, login);
+	strcat(arqname, "_files.data");
 
 	FILE *arquivos = fopen(arqname, "r");
 	char *lista;
@@ -138,8 +138,8 @@ char *get(char *arquivo, int sockfd, char *login) {
 	// Adiciona o diretório correto ao nome do arquivo
 	char endarq[2048], *msg = malloc(MAX);
 
-    strcpy(endarq, "Arquivos/");
-    strcat(endarq, login);
+	strcpy(endarq, "Arquivos/");
+	strcat(endarq, login);
 	strcat(endarq, "/");
 	strcat(endarq, arquivo);
 	//printf("Arquivo: %s\n", endarq);
@@ -162,30 +162,30 @@ char *get(char *arquivo, int sockfd, char *login) {
 		unsigned brestantes = tamanho;
 
 		// Transfere o arquivo em pedaços
-        while (brestantes > 0) {
-            bzero(buff, MAX);
-            // Leio um pedaço do arquivo
-            // O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
-            fread(buff, 1, min(MAX, brestantes), fp);
-            int benviados = write(sockfd, buff, min(MAX, brestantes));
-            //printf("Enviados %d\n", benviados);
-            brestantes -= benviados; 
-        }
-        fclose(fp);
+		while (brestantes > 0) {
+			bzero(buff, MAX);
+			// Leio um pedaço do arquivo
+			// O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
+			fread(buff, 1, min(MAX, brestantes), fp);
+			int benviados = write(sockfd, buff, min(MAX, brestantes));
+			//printf("Enviados %d\n", benviados);
+			brestantes -= benviados; 
+		}
+		fclose(fp);
 
-        // Exclui o arquivo enviado da lista de arquivos e o deleta
-        if (remarq(login, arquivo) == 0) { // Tudo ok
-            remove(endarq);
-            strcpy(msg, "Arquivo transferido com sucesso!");
-        } else { //Erro
-            adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
-            strcpy(msg, "Falha na transferência!");
-        }
-        
+		// Exclui o arquivo enviado da lista de arquivos e o deleta
+		if (remarq(login, arquivo) == 0) { // Tudo ok
+			remove(endarq);
+			strcpy(msg, "Arquivo transferido com sucesso!");
+		} else { //Erro
+			adcarq(login, endarq, tam); // Readiciona o arquivo para manter a consistência
+			strcpy(msg, "Falha na transferência!");
+		}
+		
 	} else {
 		char buff[MAX];
-        bzero(buff, MAX);
-        strcpy(buff, "-1");
+		bzero(buff, MAX);
+		strcpy(buff, "-1");
 		write(sockfd, buff, MAX);
 		strcpy(msg, "Arquivo inexistente!");
 	}
@@ -236,10 +236,146 @@ char *errmsg(int cmd) {
 	return erro;
 }
 
+// Esta função adiciona um novo usuário aos registros do servidor
+char *adduser(char *usuario, char *senha) {
+
+	char usr[MAX], pswd[MAX];
+	char *msg = malloc(MAX);
+	FILE *fp = fopen("Dados/usuarios.data", "r");
+	memset(usr, '\0', MAX);
+	memset(pswd, '\0', MAX);
+	memset(msg, '\0', MAX);
+	strcpy(msg, "Falha na criação do usuário!");
+
+	if (fp) {
+		while (!feof(fp)) {
+			fscanf(fp, "%s %s\n", usr, pswd);
+			if (strcmp(usr, usuario) == 0) {
+				strcpy(msg, "O usuário já existe!");
+				fclose(fp);
+				return msg;
+			}
+		}
+		fclose(fp);
+		fp = fopen("Dados/usuarios.data", "a");
+
+		if (fp) {
+			fprintf(fp, "%s %s\n", usuario, senha);
+			strcpy(msg, "Usuário criado com sucesso!");
+			fclose(fp);
+		}
+	}
+
+	return msg;
+}
+
+// Esta função altera a senha do usuário atualmente logado
+char *passwd(char *senhaNova, char *usuario) {
+
+	char usr[MAX], pswd[MAX];
+	char *msg = malloc(MAX);
+	memset(usr, '\0', MAX);
+	memset(pswd, '\0', MAX);
+	memset(msg, '\0', MAX);
+	strcpy(msg, "Falha na alteração da senha!");
+
+	FILE *fp = fopen("Dados/usuarios.data", "r");
+	FILE *temp = fopen("Dados/temp", "a");
+
+	if (fp) {
+		if (temp) {
+			while (!feof(fp)) {
+				fscanf(fp, "%s %s\n", usr, pswd);
+				if (strcmp(usr, usuario) == 0) {
+					fprintf(temp, "%s %s\n", usr, senhaNova);
+				} else {
+					fprintf(temp, "%s %s\n", usr, pswd);
+				}
+			}
+			fclose(fp);
+			fclose(temp);
+			// Apaga o arquivo antigo e renomeia o novo
+			if (remove("Dados/usuarios.data") == 0) {
+				if (rename("Dados/temp", "Dados/usuarios.data") == 0) {
+					strcpy(msg, "Senha alterada com sucesso!");
+				}
+			}
+		} else {
+			fclose(fp);
+		}
+	} else {
+		if (temp) fclose(temp);
+	}
+
+	return msg;
+}
+
+// Esta função remove o usuario atualmente logado
+char *rmuser(char *senha, char *login, int *rmusuario) {
+
+	char usr[MAX], pswd[MAX];
+	char *msg = malloc(MAX);
+	memset(usr, '\0', MAX);
+	memset(pswd, '\0', MAX);
+	memset(msg, '\0', MAX);
+	strcpy(msg, "Falha na remoção do usuário!");
+
+	FILE *fp = fopen("Dados/usuarios.data", "r");
+	FILE *temp = fopen("Dados/temp", "a");
+
+	if (fp) {
+		if (temp) {
+			while (!feof(fp)) {
+				fscanf(fp, "%s %s\n", usr, pswd);
+				if (strcmp(usr, login) == 0) {
+					// Verifica a autenticação do usuário
+					if (strcmp(pswd, senha) != 0) {
+						strcpy(msg, "Falha na autenticação!");
+						fclose(temp);
+						remove("Dados/temp");
+						return msg;
+					}
+				} else {
+					fprintf(temp, "%s %s\n", usr, pswd);
+				}
+			}	
+			fclose(fp);
+			fclose(temp);
+			// Apaga o arquivo antigo e renomeia o novo
+			if (remove("Dados/usuarios.data") == 0) {
+				if (rename("Dados/temp", "Dados/usuarios.data") == 0) {
+					// Apaga o arquivo de arquivos do usuário
+					char arqname[MAX];
+					memset(arqname, '\0', MAX);
+					strcpy(arqname, "Dados/");			
+					strcat(arqname, login);		
+					strcat(arqname, "_files.data");
+					remove(arqname);
+					*rmusuario = TRUE;
+					strcpy(msg, "Usuário removido com sucesso!");
+				}
+			}
+		} else {
+			fclose(fp);
+		}
+	} else {
+		if (temp) fclose(temp);
+	}
+
+	return msg;
+}
+
 // Esta função decodifica o comando enviado pelo cliente
-char *decodcmd(Comando cmd, int sockfd, char **logado) {
+char *decodcmd(Comando cmd, int sockfd, char **logado, int *rmusuario) {
 
 	//printf("logado? %d\n", (*logado));
+
+	// adduser pode ser realizado o usuário tendo ou não feito login
+	if (cmd.comando == 6) { 
+		// adduser
+		return adduser(cmd.arg1, cmd.arg2);
+	}
+
 	// Verifica se o usuário já se autenticou com o servidor
 	if (*logado != NULL) {
 		switch(cmd.comando) {
@@ -254,6 +390,12 @@ char *decodcmd(Comando cmd, int sockfd, char **logado) {
 			
 			case 4: // ls
 				return ls(*logado);
+			
+			case 7: // rmuser
+				return rmuser(cmd.arg1, *logado, rmusuario);
+			
+			case 8: // passwd
+				return passwd(cmd.arg1, *logado);
 			
 			default:
 				return errmsg(cmd.comando);
@@ -275,6 +417,7 @@ void ftp(int sockfd) {
 	char buff[MAX]; 
 	char *login = NULL;
 	Comando cmd;
+	int rmusuario = FALSE;
 
 	while (TRUE) {
 
@@ -294,13 +437,14 @@ void ftp(int sockfd) {
 		//printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 
 		// Verifica se o comando é exit
-		if (cmd.comando == 5) {
-			break;
-		}
+		if (cmd.comando == 5) break;
 
 		// Decodifica o comando recebido
 		bzero(buff, MAX);
-		strcpy(buff, decodcmd(cmd, sockfd, &login));
+		strcpy(buff, decodcmd(cmd, sockfd, &login, &rmusuario));
 		write(sockfd, buff, MAX);
+
+		// Verifica se o usuário foi removido
+		if (rmusuario) break;
 	} 
 }
