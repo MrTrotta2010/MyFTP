@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h> 
 #include <sys/types.h>
+#include <mysql/mysql.h>
 
 #define MAX 256
 #define SA struct sockaddr
@@ -37,3 +38,6 @@ int exarq(char *arquivo, char *login);
 char *encontrafsize(char *login, char *arquivo, unsigned *tamanho);
 int adcarq(char *login, char *arquivo, char *tamanho);
 int remarq(char *login, char *arquivo);
+
+/*FUNÇÔES DE MANIPULAÇÂO DO BANCO DE DADOS*/
+int connectsql();

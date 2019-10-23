@@ -202,6 +202,31 @@ def ftp (sock):
         if comando == 7:
             break
 
+def guicmd(comando, arg1, arg2, sock):
+
+    aux = str(comando).replace('\0', '')
+    aux += ((MAX-len(aux)-1)*'\0')+'\0'
+    sock.sendall(aux.encode())
+
+    aux = arg1.replace('\0', '')
+    aux += ((MAX-len(aux)-1)*'\0')+'\0'
+    sock.sendall((aux).encode())
+
+    aux = arg2.replace('\0', '')
+    aux += ((MAX-len(aux)-1)*'\0')+'\0'
+    sock.sendall((aux).encode())
+
+def guiconnect(endereco, sock):
+
+    try:
+        sock.connect(endereco)
+
+    except:
+        print('Falha na conexão!')
+        exit(1)
+
+    print('Conectado a %s na porta %s' % endereco)
+
 if __name__ == "__main__":
 
     print('CLIENTE EM PYTHON!\n')

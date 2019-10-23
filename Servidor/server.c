@@ -8,6 +8,8 @@ int main(int argc, char **argv) {
 
 	printf("SERVIDOR EM C!\n\n");
 
+	if (connectsql() != 0) exit(1);
+
 	if (argumentos(argc, argv) != 0) exit(1);
 
 	// Criação e verificação do socket 

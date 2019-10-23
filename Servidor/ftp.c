@@ -434,7 +434,7 @@ void ftp(int sockfd) {
 
 		cmd.comando = atoi(buff);
 		
-		//printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
+		printf("%d %s %s\n", cmd.comando, cmd.arg1, cmd.arg2);
 
 		// Verifica se o comando é exit
 		if (cmd.comando == 5) break;
