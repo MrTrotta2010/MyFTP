@@ -38,7 +38,7 @@ class JanelaLogin(Gtk.Window):
         label1 = Gtk.Label("Usuário: ")
         label1.set_valign(Gtk.Align.CENTER)
         self.grid.set_row_spacing(5)
-        label2 = Gtk.Label("Usuário: ")
+        label2 = Gtk.Label("Senha: ")
         label2.set_valign(Gtk.Align.CENTER)
         self.grid.attach(label1, 1, 1, 1, 1)
         self.grid.attach(self.entradaLogin, 2, 1, 1, 1)

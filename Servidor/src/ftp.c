@@ -411,7 +411,7 @@ char *decodcmd(Comando cmd, int sockfd, char **logado, int *rmusuario) {
 	}
 }
 
-// Esta função recebe e processa as requisições do cliente 
+// Esta função recebe e processa as requisições do cliente
 void ftp(int sockfd) {
 
 	char buff[MAX]; 

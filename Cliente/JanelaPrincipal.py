@@ -3,6 +3,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Gio
 import ftpclient
 import os
+import threading
 from misc import PopUp, BarraTarefas, CertezaDialog, MudaSenhaDialog
 
 MAX = 256
@@ -105,7 +106,6 @@ class JanelaPrincipal(Gtk.Window):
         self.grid.attach(p4, 3, 0, 1, 3)
 
         self.pan = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-        self.pan.set_position(500)
         print('pan', self.pan.get_position())
         frame1 = Gtk.Frame()
         frame2 = Gtk.Frame()
@@ -282,7 +282,10 @@ class JanelaPrincipal(Gtk.Window):
         )
 
     def envArquivo(self, widget, socket):
+        thread = threading.Thread(target=self.thread_put, args=(socket,))
+        thread.start()
 
+    def thread_put(self, socket):
         if self.arquivo != '':
             tamanho = os.path.getsize(self.arquivo_path)
             ftpclient.guicmd('2', self.arquivo, str(tamanho), self.socket)
@@ -291,23 +294,31 @@ class JanelaPrincipal(Gtk.Window):
                 arq = open(self.arquivo_path, "rb")
                 brestantes = int(tamanho)
 
+                self.barraProg.set_fraction(0.0)
+
                 while brestantes > 0:
                     # Leio um pedaço do arquivo
                     # O tamanho do pedaço será o tamanho do meu chunk ou a quantidade de bites restantes do arquivo
                     dados = arq.read(min(MAX, int(brestantes)))
                     self.socket.sendall(dados)
                     brestantes -= len(dados)
-                    aux = (float(tamanho)-brestantes)/float(tamanho)*100
+                    aux = (float(tamanho)-brestantes)/float(tamanho)
                     #print("Enviando... - "+str(aux)[:3]+"%")
+                    self.barraProg.set_fraction(aux)
                     print("Enviando... - "+"{0:.2f}".format(aux)+"%", end='\r')
-                    
 
                 arq.close()
+
+                msg = msg.split('\x00')[0]
+                p = PopUp(self, msg)
+                p.run()
+                self.barraProg.set_fraction(0.0)
+                p.destroy()
             
             except Exception as e:
                 print(e)
-            
-            self.socket.recv(MAX)
+
+        msg = self.socket.recv(MAX).decode()
         self.constroiListaArquivos()
         self.show_all()
 

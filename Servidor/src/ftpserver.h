@@ -8,6 +8,7 @@
 #include <string.h> 
 #include <sys/types.h>
 #include <mysql/mysql.h>
+#include <omp.h>
 
 #define MAX 256
 #define SA struct sockaddr
