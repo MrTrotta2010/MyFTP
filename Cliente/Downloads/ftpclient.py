@@ -207,14 +207,17 @@ def guicmd(comando, arg1, arg2, sock):
     aux = str(comando).replace('\0', '')
     aux += ((MAX-len(aux)-1)*'\0')+'\0'
     sock.sendall(aux.encode())
+    print('Enviou 1')
 
     aux = arg1.replace('\0', '')
     aux += ((MAX-len(aux)-1)*'\0')+'\0'
     sock.sendall((aux).encode())
+    print('Enviou 2')
 
     aux = arg2.replace('\0', '')
     aux += ((MAX-len(aux)-1)*'\0')+'\0'
     sock.sendall((aux).encode())
+    print('Enviou 3')
 
 def guiconnect(endereco, sock):
 

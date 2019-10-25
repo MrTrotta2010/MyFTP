@@ -12,6 +12,8 @@ class JanelaPrincipal(Gtk.Window):
     def __init__(self, socket, user, senha):
 
         Gtk.Window.__init__(self, title="MyFTP")
+        self.maximize()
+        self.set_icon_from_file("Imagens/icon.png")
 
         self.socket = socket   
         self.arquivo = ''
@@ -46,32 +48,75 @@ class JanelaPrincipal(Gtk.Window):
         self.popover.set_position(Gtk.PositionType.BOTTOM)
 
         self.botaoArquivo = Gtk.Button("Escolha um arquivo para enviar")
+        self.botaoArquivo.set_hexpand(True)
         self.labelArquivo = Gtk.Label("Nenhum arquivo selecionado")
-        self.botaoEnviar = Gtk.Button("Enviar")
+        self.labelArquivo.set_hexpand(True)
+        self.labelArquivo.set_justify(Gtk.Justification.LEFT)
+        self.botaoEnviar = Gtk.Button()
+        self.botaoEnviar.add(
+            Gtk.Image.new_from_gicon(
+                Gio.ThemedIcon(name="document-send-symbolic"),
+                Gtk.IconSize.DIALOG
+            )
+        )
+        self.botaoEnviar.set_hexpand(True)
 
         self.botaoArquivo.connect("clicked", self.adcArquivo, self.socket)
         self.botaoEnviar.connect("clicked", self.envArquivo, self.socket)
 
+        arqFrame = Gtk.Frame(label=' Arquivo: ')
+        arqFrame.set_label_align(0.1, 0.5)
+        arqFrame.add(self.labelArquivo)
+
         self.dropArea = Gtk.Image()
-        self.dropArea.set_from_file('drop_icon.jpg')
+        self.dropArea.set_vexpand(True)
+        self.dropArea.set_hexpand(True)
+        self.dropArea.set_from_file('Imagens/drop_area.png')
         enforce_target = Gtk.TargetEntry.new('text/plain', Gtk.TargetFlags(4), 129)
         self.dropArea.drag_dest_set(Gtk.DestDefaults.ALL, [enforce_target], Gdk.DragAction.COPY)
         self.dropArea.connect("drag-data-received", self.soltaArquivo)
 
+        self.barraProg = Gtk.ProgressBar()
+        self.barraProg.set_text('Aguardando...')
+        self.barraProg.set_show_text(True)
+
         self.grid = Gtk.Grid()
 
         self.grid.set_column_spacing(10)
-        self.grid.set_row_spacing(5)
-        self.grid.attach(self.botaoArquivo, 0, 0, 2, 1)
-        self.grid.attach(self.labelArquivo, 0, 1, 1, 1)
-        self.grid.attach(self.dropArea, 0, 2, 1, 1)
-        self.grid.attach(self.botaoEnviar, 1, 2, 1, 1)
+        self.grid.set_row_spacing(10)
+        self.grid.attach(self.botaoArquivo, 1, 1, 2, 1)
+        self.grid.attach(arqFrame, 1, 2, 1, 1)
+        self.grid.attach(self.botaoEnviar, 2, 2, 1, 1)
+        self.grid.attach(self.dropArea, 1, 3, 2, 1)
+        self.grid.attach(self.barraProg, 1, 4, 2, 1)
 
-        self.box = Gtk.Box(spacing=6)
-        self.box.pack_start(self.grid, True, True, 0)
-        self.add(self.box)
+        #Preenchendo espaço
+        p1 = Gtk.Label('')
+        #Preenchendo espaço
+        p2 = Gtk.Label('')
+        p2.set_vexpand(True)
+        #Preenchendo espaço
+        p3 = Gtk.Label('')
+        #Preenchendo espaço
+        p4 = Gtk.Label('')
+        self.grid.attach(p1 , 0, 0, 2, 1)
+        self.grid.attach(p2, 0, 5, 2, 1)
+        self.grid.attach(p3, 0, 0, 1, 3)
+        self.grid.attach(p4, 3, 0, 1, 3)
 
-        self.constroiJanelaArquivos()
+        self.pan = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        self.pan.set_position(500)
+        print('pan', self.pan.get_position())
+        frame1 = Gtk.Frame()
+        frame2 = Gtk.Frame()
+        frame1.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame2.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame1.add(self.grid)
+
+        self.pan.pack1(frame1, shrink=False)
+        self.add(self.pan)
+
+        self.constroiJanelaArquivos(frame2)
 
         self.show_all()
 
@@ -90,7 +135,7 @@ class JanelaPrincipal(Gtk.Window):
                 else:
                     self.liststore.append([temp[0], temp[1], False])
 
-    def constroiJanelaArquivos(self):
+    def constroiJanelaArquivos(self, frame2):
 
         self.liststore = Gtk.ListStore(str, str, bool)
 
@@ -116,8 +161,10 @@ class JanelaPrincipal(Gtk.Window):
         self.botaoBaixar.connect("clicked", self.clickBaixar)
 
         self.boxInterna.pack_start(self.treeview, True, True, 0)
-        self.boxInterna.pack_start(self.botaoBaixar, True, True, 0)
-        self.box.pack_start(self.boxInterna, True, True, 0)
+        self.boxInterna.pack_start(self.botaoBaixar, False, False, 0)
+
+        frame2.add(self.boxInterna)
+        self.pan.pack2(frame2, shrink=False)
 
     def clickMenuItem(self, widget):
 
@@ -230,7 +277,9 @@ class JanelaPrincipal(Gtk.Window):
 
         escolher.destroy()
 
-        self.labelArquivo.set_text(self.arquivo+' - '+str(os.path.getsize(self.arquivo_path))+' bytes')
+        self.labelArquivo.set_text(
+            'Nome: '+self.arquivo+'\nTamanho: '+str(os.path.getsize(self.arquivo_path))+' bytes'
+        )
 
     def envArquivo(self, widget, socket):
 
