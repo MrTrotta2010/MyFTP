@@ -1,51 +1,49 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk, Gio
 import ftpclient
 import os
+from misc import PopUp, BarraTarefas, CertezaDialog, MudaSenhaDialog
 
 MAX = 256
 
 class JanelaPrincipal(Gtk.Window):
 
-    def __init__(self, socket):
+    def __init__(self, socket, user, senha):
 
         Gtk.Window.__init__(self, title="MyFTP")
 
-        self.socket = socket
-    
-        self.entradaLogin = Gtk.Entry()
-        self.entradaLogin.set_text("trotta")
-        self.entradaSenha = Gtk.Entry()
-        self.entradaSenha.set_text("3.141592")
-        self.entradaHost = Gtk.Entry()
-        self.entradaHost.set_text("localhost")
-        self.entradaPorta = Gtk.Entry()
-        self.entradaPorta.set_text("8080")
-
-        self.botaoLogin = Gtk.Button("Entrar")
-        self.botaoCadastro = Gtk.Button("Cadastrar-se")
-        self.botaoLogin.connect("clicked", self.click, socket)
-        self.botaoCadastro.connect("clicked", self.click, socket)
-
-        self.grid = Gtk.Grid()
-        self.grid.set_column_spacing(10)
-        self.grid.set_row_spacing(5)
-        self.grid.attach(self.entradaLogin, 0, 0, 2, 1)
-        self.grid.attach(self.entradaHost, 2, 0, 2, 1)
-        self.grid.attach(self.entradaSenha, 0, 1, 2, 1)
-        self.grid.attach(self.entradaPorta, 2, 1, 2, 1)
-        self.grid.attach(self.botaoCadastro, 0, 2, 1, 1)
-        self.grid.attach(self.botaoLogin, 1, 2, 1, 1)
-
-        self.box = Gtk.Box(spacing=6)
-        self.box.pack_start(self.grid, True, True, 0)
-        self.add(self.box)
-
-    def constroiTelaPrincipal(self):
-
+        self.socket = socket   
         self.arquivo = ''
         self.arquivo_path = ''
+        self.senha = senha
+
+        hb = Gtk.HeaderBar()
+        hb.set_show_close_button(True)
+        hb.props.title = user
+        self.set_titlebar(hb)
+
+        button = Gtk.Button()
+        icon = Gio.ThemedIcon(name="open-menu-symbolic")
+        image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON)
+        button.add(image)
+        button.connect("clicked", self.clickMenu)
+        hb.pack_start(button)
+
+        bt1 = Gtk.ModelButton("Alterar senha")
+        bt1.connect("clicked", self.clickMenuItem)
+        bt2 = Gtk.ModelButton("Excluir usuário")
+        bt2.connect("clicked", self.clickMenuItem)
+        bt3 = Gtk.ModelButton("Sair")
+        bt3.connect("clicked", self.clickMenuItem)
+
+        self.popover = Gtk.Popover()
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        vbox.pack_start(bt1, False, True, 10)
+        vbox.pack_start(bt2, False, True, 10)
+        vbox.pack_start(bt3, False, True, 10)
+        self.popover.add(vbox)
+        self.popover.set_position(Gtk.PositionType.BOTTOM)
 
         self.botaoArquivo = Gtk.Button("Escolha um arquivo para enviar")
         self.labelArquivo = Gtk.Label("Nenhum arquivo selecionado")
@@ -54,23 +52,49 @@ class JanelaPrincipal(Gtk.Window):
         self.botaoArquivo.connect("clicked", self.adcArquivo, self.socket)
         self.botaoEnviar.connect("clicked", self.envArquivo, self.socket)
 
-        self.grid.remove_row(0)
-        self.grid.remove_row(0)
-        self.grid.remove_row(0)
+        self.dropArea = Gtk.Image()
+        self.dropArea.set_from_file('drop_icon.jpg')
+        enforce_target = Gtk.TargetEntry.new('text/plain', Gtk.TargetFlags(4), 129)
+        self.dropArea.drag_dest_set(Gtk.DestDefaults.ALL, [enforce_target], Gdk.DragAction.COPY)
+        self.dropArea.connect("drag-data-received", self.soltaArquivo)
+
+        self.grid = Gtk.Grid()
 
         self.grid.set_column_spacing(10)
         self.grid.set_row_spacing(5)
         self.grid.attach(self.botaoArquivo, 0, 0, 2, 1)
         self.grid.attach(self.labelArquivo, 0, 1, 1, 1)
-        self.grid.attach(self.botaoEnviar, 1, 1, 1, 1)
+        self.grid.attach(self.dropArea, 0, 2, 1, 1)
+        self.grid.attach(self.botaoEnviar, 1, 2, 1, 1)
+
+        self.box = Gtk.Box(spacing=6)
+        self.box.pack_start(self.grid, True, True, 0)
+        self.add(self.box)
+
+        self.constroiJanelaArquivos()
+
+        self.show_all()
+
+    def constroiListaArquivos(self):
+        self.liststore.clear()
+        ftpclient.guicmd('4', '', '', self.socket)
+        resposta = (self.socket.recv(MAX)).decode()
+        resposta = [x for x in (resposta.split('\n'))[:-1]]
+        if len(resposta) > 0:
+            for r in resposta:
+                temp = r.split(' ')
+                if len(temp) > 2:
+                    s = temp[-1]
+                    a = ' '.join(temp[0:-1])
+                    self.liststore.append([a, s, False])
+                else:
+                    self.liststore.append([temp[0], temp[1], False])
 
     def constroiJanelaArquivos(self):
 
         self.liststore = Gtk.ListStore(str, str, bool)
 
-        self.liststore.append(["Debian", 'tamanho', False])
-        self.liststore.append(["OpenSuse", 'tamanho', False])
-        self.liststore.append(["Fedora", 'tamanho', False])
+        self.constroiListaArquivos()
 
         self.treeview = Gtk.TreeView(model=self.liststore)
 
@@ -87,30 +111,111 @@ class JanelaPrincipal(Gtk.Window):
         coluna3 = Gtk.TreeViewColumn("Baixar", toggle, active=2)
         self.treeview.append_column(coluna3)
 
-        self.box.pack_start(self.treeview, True, True, 0)
+        self.boxInterna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.botaoBaixar = Gtk.Button("Baixar")
+        self.botaoBaixar.connect("clicked", self.clickBaixar)
 
-    def click(self, widget, socket):
+        self.boxInterna.pack_start(self.treeview, True, True, 0)
+        self.boxInterna.pack_start(self.botaoBaixar, True, True, 0)
+        self.box.pack_start(self.boxInterna, True, True, 0)
 
-        if widget.get_label() == "Cadastrar-se":
-            print('Cadastrou')
+    def clickMenuItem(self, widget):
 
-        elif widget.get_label() == "Entrar":
-            
-            print('Fez login')
-            endereco = (self.entradaHost.get_text(), int(self.entradaPorta.get_text()))
-            ftpclient.guiconnect(endereco, self.socket)
+        if widget.get_label() == "Sair":
+            Gtk.main_quit()
 
-            ftpclient.guicmd('1', self.entradaLogin.get_text(), self.entradaSenha.get_text(), self.socket)
-            resposta = (self.socket.recv(MAX)).decode()
-            print(resposta)
+        elif widget.get_label() == "Alterar senha":
+            while (True):
+                d = MudaSenhaDialog(self)
+                r = d.run()
+                senha1 = d.senhaEntry.get_text()
+                senha2 = d.senhaEntry2.get_text()
+                d.destroy()
+                if r == Gtk.ResponseType.OK:
+                    if senha1 == '' or senha2 == '':
+                        p = PopUp(self, 'Preencha todos os campos!')
+                        p.run()
+                        p.destroy()
+                    elif senha1 != senha2:
+                        p = PopUp(self, 'As senhas digitadas são diferentes!')
+                        p.run()
+                        p.destroy()
+                    else:
+                        ftpclient.guicmd('8', senha1, '', self.socket)
+                        resp = self.socket.recv(MAX).decode()
+                        resp = resp.split('\x00')[0]
+                        p = PopUp(self, resp)
+                        p.run()
+                        p.destroy()
+                        break
+                else:
+                    break
 
-            if 'Login efetuado com sucesso!' in resposta:
-                self.constroiTelaPrincipal()
-                self.constroiJanelaArquivos()
-                self.show_all()
+        elif widget.get_label() == "Excluir usuário":
+            d = CertezaDialog(self)
+            r = d.run()
+            d.destroy()
+            if r == Gtk.ResponseType.OK:
+                ftpclient.guicmd('7', self.senha, '', self.socket)
+                resp = self.socket.recv(MAX).decode()
+                resp = resp.split('\x00')[0]
+                p = PopUp(self, resp)
+                p.run()
+                p.destroy()
+                ftpclient.guicmd('5', 'arg1', 'arg2', self.socket)
+                Gtk.main_quit()
+
+    def clickMenu(self, widget):
+        self.popover.set_relative_to(widget)
+        self.popover.show_all()
+        self.popover.popup()
             
     def toggleBaixar(self, widget, path):
         self.liststore[path][2] = not self.liststore[path][2]
+
+    def clickBaixar(self, widget):
+        lista = []
+        for a in self.liststore:
+            if a[2] == True:
+                lista.append(a[0])
+
+        for a in lista:
+            ftpclient.guicmd('3', a, '', self.socket)
+            tamanho = (self.socket.recv(MAX)).decode()
+            tamanho = tamanho.split('\x00')[0]
+            print(tamanho)
+            tamanho = int(tamanho)
+
+            if tamanho == -1:
+                return
+
+            brestantes = tamanho
+            brecebidos = 0
+
+            try:
+                arq = open('Downloads/'+a, "wb")
+
+                # Recebe o arquivo em pedaços e salva em outro arquivo
+                while brestantes > 0:
+                    dados = self.socket.recv(min(MAX, brestantes))
+                    blidos = len(dados)
+
+                    # Salva os dados recebidos no arquivo criado
+                    arq.write(dados)
+                    brestantes -= blidos
+                    brecebidos += blidos
+                    aux = brecebidos/tamanho*100
+                    print("Recebendo... - "+"{0:.2f}".format(aux)+"%", end='\r')
+            
+                arq.close()
+
+            except Exception as e:
+                print(e)
+                os.remove('Downloads/'+a)
+
+            self.socket.recv(MAX)
+            self.constroiListaArquivos()
+            self.show_all()
 
     def adcArquivo(self, widget, socket):
         print('Escolha o arquivo')
@@ -125,7 +230,7 @@ class JanelaPrincipal(Gtk.Window):
 
         escolher.destroy()
 
-        self.labelArquivo.set_text(self.arquivo)
+        self.labelArquivo.set_text(self.arquivo+' - '+str(os.path.getsize(self.arquivo_path))+' bytes')
 
     def envArquivo(self, widget, socket):
 
@@ -152,7 +257,12 @@ class JanelaPrincipal(Gtk.Window):
             
             except Exception as e:
                 print(e)
+            
+            self.socket.recv(MAX)
+        self.constroiListaArquivos()
+        self.show_all()
 
-    def clientExit (self, widget, socket):
-        ftpclient.guicmd('5', 'arg1', 'arg2', self.socket)
-        Gtk.main_quit()  
+    def soltaArquivo(self, widget, drag_context, x, y, data, info, time):
+        self.arquivo_path = data.get_text().replace('file://', '').replace('\n', '')
+        self.arquivo = self.arquivo_path.split('/')[-1]
+        self.labelArquivo.set_text(self.arquivo+' - '+str(os.path.getsize(self.arquivo_path))+' bytes') 

@@ -78,7 +78,7 @@ char *ls(char *login) {
 }
 
 unsigned long min (int a, unsigned b) {
-	if (a < b) return a;
+	if ((unsigned)a < b) return a;
 	return b;
 }
 
@@ -426,11 +426,11 @@ void ftp(int sockfd) {
 		bzero(cmd.arg2, MAX);
 
 		// Recebe o comando do cliente e guarda os argumentos
-		read(sockfd, buff, 256);
+		read(sockfd, buff, MAX);
 
-		read(sockfd, cmd.arg1, 256);
+		read(sockfd, cmd.arg1, MAX);
 
-		read(sockfd, cmd.arg2, 256);
+		read(sockfd, cmd.arg2, MAX);
 
 		cmd.comando = atoi(buff);
 		

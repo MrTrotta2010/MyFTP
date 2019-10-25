@@ -13,9 +13,9 @@ unsigned tamarq(FILE *arq) {
 int exarq(char *arquivo, char *login) {
 
     char arqname[2048], n[MAX], t[MAX];
-    bzero(arqname, 2048);
-    bzero(n, MAX);
-    bzero(t, MAX);
+    memset(arqname, '\0', 2048);
+    memset(n, '\0', MAX);
+    memset(t, '\0', MAX);
     strcpy(arqname, "Dados/");
     strcat(arqname, login);
     strcat(arqname, "_files.data");
@@ -38,19 +38,19 @@ int exarq(char *arquivo, char *login) {
 char *encontrafsize(char *login, char *arquivo, unsigned *tamanho) {
 
     char arqname[2048];
-    bzero(arqname, 2048);
+    memset(arqname, '\0', 2048);
     strcpy(arqname, "Dados/");
     strcat(arqname, login);
     strcat(arqname, "_files.data");
 	FILE *fp = fopen(arqname, "r");
 	char n[MAX];
 	char *aux = malloc(MAX);
-	bzero(aux, MAX);
-	bzero(n, MAX);
+	memset(aux, '\0', MAX);
+	memset(n, '\0', MAX);
 
 	while (strcmp(n, arquivo) != 0) {
-		bzero(aux, MAX);
-		bzero(n, MAX);
+		memset(aux, '\0', MAX);
+		memset(n, '\0', MAX);
 		fscanf(fp, "%s %s\n", n, aux);
 	}
 
@@ -67,10 +67,10 @@ int adcarq(char *login, char *arquivo, char *tamanho) {
 	int existe = FALSE;
 	char n[MAX], t[MAX];
 	char arqname[2048];
-    bzero(n, MAX);
-    bzero(t, MAX);
+    memset(n, '\0', MAX);
+    memset(t, '\0', MAX);
 
-    bzero(arqname, 2048);
+    memset(arqname, '\0', 2048);
     strcpy(arqname, "Dados/");
     strcat(arqname, login);
     strcat(arqname, "_files.data");
@@ -111,7 +111,7 @@ int adcarq(char *login, char *arquivo, char *tamanho) {
 int remarq(char *login, char *arquivo) {
 
     char arqname[2048];
-    bzero(arqname, 2048);
+    memset(arqname, '\0', 2048);
     strcpy(arqname, "Dados/");
     strcat(arqname, login);
     strcat(arqname, "_files.data");
@@ -125,8 +125,8 @@ int remarq(char *login, char *arquivo) {
 		if (novo) {
 			// Percorre o arquivo antigo copiando para uma string as entradas diferentes do nome do arquivo
 			while (!feof(alvo)) {
-				bzero(n, MAX);
-				bzero(t, MAX);
+				memset(n, '\0', MAX);
+				memset(t, '\0', MAX);
 				fscanf(alvo, "%s %s\n", n, t);
 				if (strcmp(arquivo, n) != 0) {
 					fprintf(novo, "%s %s\n", n, t);
